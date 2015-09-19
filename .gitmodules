@@ -1,0 +1,52 @@
+[submodule "docroot/sites/all/modules/contrib/ajax_forms_api"]
+	path = docroot/sites/all/modules/contrib/ajax_forms_api
+	url = sanchiz@git.drupal.org:project/ajax_forms_api.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/bypass_comment_review"]
+	path = docroot/sites/all/modules/contrib/bypass_comment_review
+	url = sanchiz@git.drupal.org:project/bypass_comment_review.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/context_docket"]
+	path = docroot/sites/all/modules/contrib/context_docket
+	url = sanchiz@git.drupal.org:project/context_docket.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/drupalauth4ssp"]
+	path = docroot/sites/all/modules/contrib/drupalauth4ssp
+	url = sanchiz@git.drupal.org:project/drupalauth4ssp.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/media_vimeo_uploader"]
+	path = docroot/sites/all/modules/contrib/media_vimeo_uploader
+	url = sanchiz@git.drupal.org:project/media_vimeo_uploader.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/expire_panels"]
+	path = docroot/sites/all/modules/contrib/expire_panels
+	url = sanchiz@git.drupal.org:project/expire_panels.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/panels_contextual_links"]
+	path = docroot/sites/all/modules/contrib/panels_contextual_links
+	url = sanchiz@git.drupal.org:project/panels_contextual_links.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/pathauto_i18n"]
+	path = docroot/sites/all/modules/contrib/pathauto_i18n
+	url = sanchiz@git.drupal.org:project/pathauto_i18n.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/resumablefield"]
+	path = docroot/sites/all/modules/contrib/resumablefield
+	url = sanchiz@git.drupal.org:project/resumablefield.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/schema_version"]
+	path = docroot/sites/all/modules/contrib/schema_version
+	url = sanchiz@git.drupal.org:project/schema_version.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/user_profile_comments"]
+	path = docroot/sites/all/modules/contrib/user_profile_comments
+	url = sanchiz@git.drupal.org:project/user_profile_comments.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/views_docket"]
+	path = docroot/sites/all/modules/contrib/views_docket
+	url = sanchiz@git.drupal.org:project/views_docket.git
+	branch = 7.x-1.x
+[submodule "docroot/sites/all/modules/contrib/webform_conditional_values"]
+	path = docroot/sites/all/modules/contrib/webform_conditional_values
+	url = sanchiz@git.drupal.org:project/webform_conditional_values.git
+	branch = 7.x-1.x
