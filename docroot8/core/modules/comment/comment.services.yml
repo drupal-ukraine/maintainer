@@ -1,0 +1,18 @@
+services:
+  comment.breadcrumb:
+    class: Drupal\comment\CommentBreadcrumbBuilder
+    tags:
+      - { name: breadcrumb_builder, priority: 100 }
+    arguments: ['@entity.manager']
+
+  comment.manager:
+    class: Drupal\comment\CommentManager
+    arguments: ['@entity.manager', '@config.factory', '@string_translation', '@url_generator']
+
+  comment.statistics:
+    class: Drupal\comment\CommentStatistics
+    arguments: ['@database', '@current_user', '@entity.manager', '@state']
+
+  comment.post_render_cache:
+    class: Drupal\comment\CommentPostRenderCache
+    arguments: ['@entity.manager', '@entity.form_builder']

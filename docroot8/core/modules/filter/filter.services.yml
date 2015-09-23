@@ -1,0 +1,4 @@
+services:
+  plugin.manager.filter:
+    class: Drupal\filter\FilterPluginManager
+    parent: default_plugin_manager
