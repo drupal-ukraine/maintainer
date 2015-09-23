@@ -1,0 +1,11 @@
+name = Drupal mainteiner profile
+description = Sanchiz profile in order to create site for module maintenance.
+core = 7.x
+dependencies[] = block
+dependencies[] = dblog
+
+# Contrib.
+dependencies[] = admin_menu
+
+# My modules.
+dependencies[] = user_profile_comments
