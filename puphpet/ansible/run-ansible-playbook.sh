@@ -12,7 +12,7 @@ playbooks=(
 /vagrant/puphpet/ansible/memcached.yml \
 /vagrant/puphpet/ansible/composer.yml \
 /vagrant/puphpet/ansible/drush.yml \
-/vagrant/puphpet/ansible/solr.yml \
+#/vagrant/puphpet/ansible/solr.yml \
 /vagrant/puphpet/ansible/sniffers.yml \
 )
 
