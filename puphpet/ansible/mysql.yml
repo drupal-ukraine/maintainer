@@ -15,11 +15,16 @@
 
     mysql_databases:
       - name: drupal
+      - name: drupal8
     mysql_users:
       - name: drupal
         host: "localhost"
         password: drupal
         priv: "drupal.*:ALL"
+      - name: drupal8
+        host: "localhost"
+        password: drupal8
+        priv: "drupal8.*:ALL"
 
     mysql_innodb_file_per_table: "1"
     mysql_tmp_table_size: "160M"
