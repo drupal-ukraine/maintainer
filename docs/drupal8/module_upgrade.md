@@ -54,7 +54,7 @@ More details https://github.com/propeoplemd/cibox/wiki/How-to-eject-the-custom-c
     ```
     git pull
     ```
-3. Push this code to drupal.org(don't ise `--force` in order to save old Drupal 7 history):
+3. Push this code to drupal.org(don't use `--force` in order to save old Drupal 7 history):
     ```
     git push
     ```
