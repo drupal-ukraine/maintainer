@@ -22,7 +22,7 @@ How to start upgrading Drupal 7 modules to Drupal 8
     git mv $(ls | grep -vi "drupal7") drupal7
     ```
     
-4. Create GitHub repository, commit code and push code to GitHub and drupal.org
+4. Create GitHub repository, commit code and push code to GitHub
 5. Clone Vagrant Box for maintainers https://github.com/drupal-ukraine/maintainer to some place:
 
     ```
@@ -50,11 +50,8 @@ Now you are ready to start working on Drupal 8 porting. Once you're ready to pus
     git filter-branch --subdirectory-filter d8/modules/porting/PROJECT_NAME HEAD
     ```
 More details https://github.com/propeoplemd/cibox/wiki/How-to-eject-the-custom-code-for-drupal.org
-2. Pull code from 8.x-1.x branch on drupal.org:
-    ```
-    git pull origin 8.x-1.x
-    ```
-3. Push this code to drupal.org(don't use `--force` in order to save old Drupal 7 history):
+2. Push this code to drupal.org(for maintainers):
     ```
     git push origin 8.x-1.x
     ```
+    
