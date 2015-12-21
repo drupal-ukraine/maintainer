@@ -34,8 +34,8 @@ How to start upgrading Drupal 7 modules to Drupal 8
 6. Create module folder in Drupal 8 code and move Drupal 7 code:
 
     ```
-    mkdir -p d8/modules/porting/PROJECT_NAME
-    mv drupal7 d8/modules/porting/PROJECT_NAME
+    mkdir -p d8/modules/custom/PROJECT_NAME
+    mv drupal7 d8/modules/custom/PROJECT_NAME
     ```
     
 7. Commit code and push to GitHub
@@ -47,7 +47,7 @@ Now you are ready to start working on Drupal 8 porting. Once you're ready to pus
 1. Filter commits and leavel only module files:
 
     ```
-    git filter-branch --subdirectory-filter d8/modules/porting/PROJECT_NAME HEAD
+    git filter-branch --subdirectory-filter d8/modules/custom/PROJECT_NAME HEAD
     ```
 More details https://github.com/propeoplemd/cibox/wiki/How-to-eject-the-custom-code-for-drupal.org
 2. Pull code from 8.x-1.x branch on drupal.org:
