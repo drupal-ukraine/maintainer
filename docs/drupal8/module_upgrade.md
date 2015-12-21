@@ -22,7 +22,7 @@ How to start upgrading Drupal 7 modules to Drupal 8
     git mv $(ls * | grep -vi "drupal7") drupal7
     ```
     
-4. Create GitHub repository and push code to GitHub
+4. Create GitHub repository and push code to GitHub and drupal.org
 5. Clone Vagrant Box for maintainers https://github.com/drupal-ukraine/maintainer to some place:
 
     ```
