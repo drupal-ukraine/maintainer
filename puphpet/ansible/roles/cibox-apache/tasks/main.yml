@@ -1,9 +1,0 @@
----
-
-- name: Add apache environment variables.
-  lineinfile:
-    dest: "{{ cibox_apache_server_root }}/envvars"
-    state: present
-    line: "{{ item }}"
-  with_items: cibox_apache_env_vars
-  notify: restart apache

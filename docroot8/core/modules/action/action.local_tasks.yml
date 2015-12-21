@@ -1,4 +1,0 @@
-action.admin:
-  route_name: action.admin
-  title: 'Manage actions'
-  base_route: action.admin

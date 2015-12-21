@@ -1,7 +1,0 @@
-vid: forums
-name: Forums
-description: 'Forum navigation vocabulary'
-hierarchy: 1
-weight: -10
-status: true
-langcode: en
