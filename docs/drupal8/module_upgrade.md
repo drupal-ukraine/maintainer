@@ -19,7 +19,7 @@ How to start upgrading Drupal 7 modules to Drupal 8
 
     ```
     mkdir drupal7
-    git mv $(ls * | grep -vi "drupal7") drupal7
+    git mv $(ls | grep -vi "drupal7") drupal7
     ```
     
 4. Create GitHub repository and push code to GitHub and drupal.org
