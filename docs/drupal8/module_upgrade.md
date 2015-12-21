@@ -47,3 +47,4 @@ Now you are ready to start working on Drupal 8 porting. Once you're ready to pus
 ```
 git filter-branch --subdirectory-filter d8/modules/custom/PROJECT_NAME HEAD
 ```
+More details https://github.com/propeoplemd/cibox/wiki/How-to-eject-the-custom-code-for-drupal.org
