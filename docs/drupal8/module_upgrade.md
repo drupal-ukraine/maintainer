@@ -1,7 +1,7 @@
 How to start upgrading Drupal 7 modules to Drupal 8
 ======
 
-# Drupal 7 module has no 8.* branch.
+# Init GitHub repo for 8.* branch.
 1. Clone latest 7.x version from drupal.org:
 
     ```
@@ -39,3 +39,11 @@ How to start upgrading Drupal 7 modules to Drupal 8
     ```
     
 7. Commit and push to GitHub
+
+# Prepare repo for GitHub
+
+Now you are ready to start working on Drupal 8 porting. Once you're ready to push Drupal 8 code to drupal.org run followign command in order to prepare repository and remove unnecessary code:
+
+```
+git filter-branch --subdirectory-filter d8/modules/custom/PROJECT_NAME HEAD
+```
