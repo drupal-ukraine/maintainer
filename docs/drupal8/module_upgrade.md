@@ -52,9 +52,9 @@ Now you are ready to start working on Drupal 8 porting. Once you're ready to pus
 More details https://github.com/propeoplemd/cibox/wiki/How-to-eject-the-custom-code-for-drupal.org
 2. Pull code from 8.x-1.x branch on drupal.org:
     ```
-    git pull
+    git pull origin 8.x-1.x
     ```
 3. Push this code to drupal.org(don't use `--force` in order to save old Drupal 7 history):
     ```
-    git push
+    git push origin 8.x-1.x
     ```
