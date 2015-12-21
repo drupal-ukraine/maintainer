@@ -50,5 +50,11 @@ Now you are ready to start working on Drupal 8 porting. Once you're ready to pus
     git filter-branch --subdirectory-filter d8/modules/porting/PROJECT_NAME HEAD
     ```
 More details https://github.com/propeoplemd/cibox/wiki/How-to-eject-the-custom-code-for-drupal.org
-
-2. Push this code to drupal.org(don't ise `--force` in order to save old Drupal 7 history)
+2. Pull code from 8.x-1.x branch on drupal.org:
+    ```
+    git pull
+    ```
+3. Push this code to drupal.org(don't ise `--force` in order to save old Drupal 7 history):
+    ```
+    git push
+    ```
