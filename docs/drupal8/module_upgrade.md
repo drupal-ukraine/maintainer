@@ -22,14 +22,13 @@ How to start upgrading Drupal 7 modules to Drupal 8
     git mv $(ls | grep -vi "drupal7") drupal7
     ```
     
-4. Create GitHub repository and push code to GitHub and drupal.org
+4. Create GitHub repository, commit code and push code to GitHub and drupal.org
 5. Clone Vagrant Box for maintainers https://github.com/drupal-ukraine/maintainer to some place:
 
     ```
     git clone git@github.com:drupal-ukraine/maintainer.git
-    cd maintainer
     cp -r maintainer/* ./
-    cp -r maintainer/.gitignore ./
+    cp maintainer/.gitignore ./
     ```
 6. Create module folder in Drupal 8 code and move Drupal 7 code:
 
@@ -38,7 +37,7 @@ How to start upgrading Drupal 7 modules to Drupal 8
     mv drupal7 d8/modules/PROJECT_NAME
     ```
     
-7. Commit and push to GitHub
+7. Commit code and push to GitHub
 
 # Prepare repo for GitHub
 
