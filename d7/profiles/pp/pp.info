@@ -16,3 +16,5 @@ dependencies[] = number
 dependencies[] = image
 dependencies[] = views
 dependencies[] = views_ui
+dependencies[] = admin_menu
+dependencies[] = module_filter
