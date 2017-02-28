@@ -13,9 +13,9 @@ playbooks=(
 /vagrant/provisioning/ansible/playbooks/php-xdebug.yml \
 /vagrant/provisioning/ansible/playbooks/mysql.yml \
 /vagrant/provisioning/ansible/playbooks/memcached.yml \
-/vagrant/provisioning/ansible/playbooks/composer.yml \
+# /vagrant/provisioning/ansible/playbooks/composer.yml \
 /vagrant/provisioning/ansible/playbooks/drush.yml \
-/vagrant/provisioning/ansible/playbooks/solr.yml \
+# /vagrant/provisioning/ansible/playbooks/solr.yml \
 /vagrant/provisioning/ansible/playbooks/sniffers.yml \
 /vagrant/provisioning/ansible/playbooks/docker.yml \
 )
