@@ -1,37 +1,17 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\link\Plugin\Validation\Constraint\LinkNotExistingInternalConstraintValidator.
- */
-
 namespace Drupal\link\Plugin\Validation\Constraint;
 
 use Symfony\Component\Routing\Exception\InvalidParameterException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Validator\Constraint;
-use Symfony\Component\Validator\ConstraintValidatorInterface;
-use Symfony\Component\Validator\ExecutionContextInterface;
+use Symfony\Component\Validator\ConstraintValidator;
 
 /**
  * Validates the LinkNotExistingInternal constraint.
  */
-class LinkNotExistingInternalConstraintValidator implements ConstraintValidatorInterface {
-
-  /**
-   * Stores the validator's state during validation.
-   *
-   * @var \Symfony\Component\Validator\ExecutionContextInterface
-   */
-  protected $context;
-
-  /**
-   * {@inheritdoc}
-   */
-  public function initialize(ExecutionContextInterface $context) {
-    $this->context = $context;
-  }
+class LinkNotExistingInternalConstraintValidator extends ConstraintValidator {
 
   /**
    * {@inheritdoc}

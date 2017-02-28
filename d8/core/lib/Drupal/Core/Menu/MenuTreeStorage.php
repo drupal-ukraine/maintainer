@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Menu\MenuTreeStorage.
- */
-
 namespace Drupal\Core\Menu;
 
 use Drupal\Component\Plugin\Exception\PluginException;
@@ -320,7 +315,7 @@ class MenuTreeStorage implements MenuTreeStorageInterface {
       $this->updateParentalStatus($link);
     }
     catch (\Exception $e) {
-      $transaction->rollback();
+      $transaction->rollBack();
       throw $e;
     }
     return $affected_menus;
@@ -1102,7 +1097,6 @@ class MenuTreeStorage implements MenuTreeStorageInterface {
    *   is an associative array of information about the menu link, containing
    *   the fields from the $this->table. This array must be ordered
    *   depth-first. MenuTreeStorage::loadTreeData() includes a sample query.
-   *
    * @param array $parents
    *   An array of the menu link ID values that are in the path from the current
    *   page to the root of the menu tree.

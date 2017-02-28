@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\ajax_test\Controller\AjaxTestController.
- */
-
 namespace Drupal\ajax_test\Controller;
 
 use Drupal\Core\Ajax\AjaxResponse;
@@ -28,7 +23,7 @@ class AjaxTestController {
   public static function dialogContents() {
     // This is a regular render array; the keys do not have special meaning.
     $content = array(
-      '#title' => 'AJAX Dialog contents',
+      '#title' => '<em>AJAX Dialog & contents</em>',
       'content' => array(
         '#markup' => 'Example message',
       ),
@@ -50,9 +45,8 @@ class AjaxTestController {
   /**
    * Returns a render array that will be rendered by AjaxRenderer.
    *
-   * Ensures that \Drupal\Core\Ajax\AjaxResponse::ajaxRender()
-   * incorporates JavaScript settings generated during the page request by
-   * adding a dummy setting.
+   * Verifies that the response incorporates JavaScript settings generated
+   * during the page request by adding a dummy setting.
    */
   public function render() {
     return [
@@ -64,6 +58,15 @@ class AjaxTestController {
           'ajax' => 'test',
         ],
       ],
+    ];
+  }
+
+  /**
+   * Returns the used theme.
+   */
+  public function theme() {
+    return [
+      '#markup' => 'Current theme: ' . \Drupal::theme()->getActiveTheme()->getName(),
     ];
   }
 
@@ -190,6 +193,17 @@ class AjaxTestController {
             ))
           ),
         ),
+        'link8' => [
+          'title' => 'Link 8 (ajax)',
+          'url' => Url::fromRoute('ajax_test.admin.theme'),
+          'attributes' => [
+            'class' => ['use-ajax'],
+            'data-dialog-type' => 'modal',
+            'data-dialog-options' => json_encode([
+              'width' => 400,
+            ]),
+          ],
+        ],
       ),
     );
 

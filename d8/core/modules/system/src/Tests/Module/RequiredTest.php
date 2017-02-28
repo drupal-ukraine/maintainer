@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Tests\Module\RequiredTest.
- */
-
 namespace Drupal\system\Tests\Module;
 
 /**
@@ -23,7 +18,7 @@ class RequiredTest extends ModuleTestBase {
       // Check to make sure the checkbox for each required module is disabled
       // and checked (or absent from the page if the module is also hidden).
       if (!empty($info['required'])) {
-        $field_name = "modules[{$info['package']}][$module][enable]";
+        $field_name = 'modules[' . $module . '][enable]';
         if (empty($info['hidden'])) {
           $this->assertFieldByXPath("//input[@name='$field_name' and @disabled='disabled' and @checked='checked']", '', format_string('Field @name was disabled and checked.', array('@name' => $field_name)));
         }
@@ -33,4 +28,5 @@ class RequiredTest extends ModuleTestBase {
       }
     }
   }
+
 }

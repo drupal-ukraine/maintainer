@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Config\Entity\DraggableListBuilder.
- */
-
 namespace Drupal\Core\Config\Entity;
 
 use Drupal\Core\Entity\EntityInterface;
@@ -38,6 +33,11 @@ abstract class DraggableListBuilder extends ConfigEntityListBuilder implements F
    * @var string|bool
    */
   protected $weightKey = FALSE;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $limit = FALSE;
 
   /**
    * The form builder.
@@ -140,7 +140,7 @@ abstract class DraggableListBuilder extends ConfigEntityListBuilder implements F
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = array(
       '#type' => 'submit',
-      '#value' => t('Save order'),
+      '#value' => t('Save'),
       '#button_type' => 'primary',
     );
 

@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Tests\Theme\EngineTwigTest.
- */
-
 namespace Drupal\system\Tests\Theme;
 
+use Drupal\Core\Render\Markup;
 use Drupal\Core\Url;
 use Drupal\simpletest\WebTestBase;
 
@@ -77,15 +73,20 @@ class EngineTwigTest extends WebTestBase {
   public function testTwigLinkGenerator() {
     $this->drupalGet('twig-theme-test/link-generator');
 
-     /** @var \Drupal\Core\Utility\LinkGenerator $link_generator */
+    /** @var \Drupal\Core\Utility\LinkGenerator $link_generator */
     $link_generator = $this->container->get('link_generator');
 
+
+    $generated_url = Url::fromRoute('user.register', [], ['absolute' => TRUE])->toString(TRUE)->getGeneratedUrl();
     $expected = [
       'link via the linkgenerator: ' . $link_generator->generate('register', new Url('user.register', [], ['absolute' => TRUE])),
       'link via the linkgenerator: ' . $link_generator->generate('register', new Url('user.register', [], ['absolute' => TRUE, 'attributes' => ['foo' => 'bar']])),
       'link via the linkgenerator: ' . $link_generator->generate('register', new Url('user.register', [], ['attributes' => ['foo' => 'bar', 'id' => 'kitten']])),
       'link via the linkgenerator: ' . $link_generator->generate('register', new Url('user.register', [], ['attributes' => ['id' => 'kitten']])),
       'link via the linkgenerator: ' . $link_generator->generate('register', new Url('user.register', [], ['attributes' => ['class' => ['llama', 'kitten', 'panda']]])),
+      'link via the linkgenerator: ' . $link_generator->generate(Markup::create('<span>register</span>'), new Url('user.register', [], ['absolute' => TRUE])),
+      'link via the linkgenerator: <a href="' . $generated_url . '"><span>register</span><svg></svg></a>',
+      'link via the linkgenerator: ' . $link_generator->generate('register', new Url('user.register', [], ['attributes' => ['foo' => 'bar']])) . ' ' . $link_generator->generate('register', new Url('user.register', [], ['attributes' => ['foo' => 'bar']])),
     ];
 
     // Verify that link() has the ability to bubble cacheability metadata:
@@ -125,7 +126,7 @@ class EngineTwigTest extends WebTestBase {
    */
   public function testTwigFileUrls() {
     $this->drupalGet('/twig-theme-test/file-url');
-    $filepath = file_create_url('core/modules/system/tests/modules/twig_theme_test/twig_theme_test.js');
+    $filepath = file_url_transform_relative(file_create_url('core/modules/system/tests/modules/twig_theme_test/twig_theme_test.js'));
     $this->assertRaw('<div>file_url: ' . $filepath . '</div>');
   }
 

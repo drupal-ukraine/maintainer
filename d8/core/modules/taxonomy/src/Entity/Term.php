@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\taxonomy\Entity\Term.
- */
-
 namespace Drupal\taxonomy\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
@@ -73,7 +68,7 @@ class Term extends ContentEntityBase implements TermInterface {
           // If the term has multiple parents, we don't delete it.
           $parents = $storage->loadParents($child->id());
           if (empty($parents)) {
-            $orphans[] = $child->id();
+            $orphans[] = $child;
           }
         }
       }
@@ -84,7 +79,7 @@ class Term extends ContentEntityBase implements TermInterface {
     $storage->deleteTermHierarchy(array_keys($entities));
 
     if (!empty($orphans)) {
-      entity_delete_multiple('taxonomy_term', $orphans);
+      $storage->delete($orphans);
     }
   }
 
@@ -106,37 +101,21 @@ class Term extends ContentEntityBase implements TermInterface {
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
-    $fields['tid'] = BaseFieldDefinition::create('integer')
-      ->setLabel(t('Term ID'))
-      ->setDescription(t('The term ID.'))
-      ->setReadOnly(TRUE)
-      ->setSetting('unsigned', TRUE);
+    /** @var \Drupal\Core\Field\BaseFieldDefinition[] $fields */
+    $fields = parent::baseFieldDefinitions($entity_type);
 
-    $fields['uuid'] = BaseFieldDefinition::create('uuid')
-      ->setLabel(t('UUID'))
-      ->setDescription(t('The term UUID.'))
-      ->setReadOnly(TRUE);
+    $fields['tid']->setLabel(t('Term ID'))
+      ->setDescription(t('The term ID.'));
 
-    $fields['vid'] = BaseFieldDefinition::create('entity_reference')
-      ->setLabel(t('Vocabulary'))
-      ->setDescription(t('The vocabulary to which the term is assigned.'))
-      ->setSetting('target_type', 'taxonomy_vocabulary');
+    $fields['uuid']->setDescription(t('The term UUID.'));
 
-    $fields['langcode'] = BaseFieldDefinition::create('language')
-      ->setLabel(t('Language'))
-      ->setDescription(t('The term language code.'))
-      ->setTranslatable(TRUE)
-      ->setDisplayOptions('view', array(
-        'type' => 'hidden',
-      ))
-      ->setDisplayOptions('form', array(
-        'type' => 'language_select',
-        'weight' => 2,
-      ));
+    $fields['vid']->setLabel(t('Vocabulary'))
+      ->setDescription(t('The vocabulary to which the term is assigned.'));
+
+    $fields['langcode']->setDescription(t('The term language code.'));
 
     $fields['name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Name'))
-      ->setDescription(t('The term name.'))
       ->setTranslatable(TRUE)
       ->setRequired(TRUE)
       ->setSetting('max_length', 255)
@@ -153,7 +132,6 @@ class Term extends ContentEntityBase implements TermInterface {
 
     $fields['description'] = BaseFieldDefinition::create('text_long')
       ->setLabel(t('Description'))
-      ->setDescription(t('A description of the term.'))
       ->setTranslatable(TRUE)
       ->setDisplayOptions('view', array(
         'label' => 'hidden',

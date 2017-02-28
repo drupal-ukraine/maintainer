@@ -1,14 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\node\Entity\Node.
- */
-
 namespace Drupal\node\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\Core\Entity\EntityChangedTrait;
+use Drupal\Core\Entity\EntityPublishedTrait;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
@@ -22,6 +18,13 @@ use Drupal\user\UserInterface;
  * @ContentEntityType(
  *   id = "node",
  *   label = @Translation("Content"),
+ *   label_collection = @Translation("Content"),
+ *   label_singular = @Translation("content item"),
+ *   label_plural = @Translation("content items"),
+ *   label_count = @PluralTranslation(
+ *     singular = "@count content item",
+ *     plural = "@count content items"
+ *   ),
  *   bundle_label = @Translation("Content type"),
  *   handlers = {
  *     "storage" = "Drupal\node\NodeStorage",
@@ -44,6 +47,7 @@ use Drupal\user\UserInterface;
  *   data_table = "node_field_data",
  *   revision_table = "node_revision",
  *   revision_data_table = "node_field_revision",
+ *   show_revision_ui = TRUE,
  *   translatable = TRUE,
  *   list_cache_contexts = { "user.node_grants:view" },
  *   entity_keys = {
@@ -54,6 +58,7 @@ use Drupal\user\UserInterface;
  *     "langcode" = "langcode",
  *     "uuid" = "uuid",
  *     "status" = "status",
+ *     "published" = "status",
  *     "uid" = "uid",
  *   },
  *   bundle_entity_type = "node_type",
@@ -72,6 +77,7 @@ use Drupal\user\UserInterface;
 class Node extends ContentEntityBase implements NodeInterface {
 
   use EntityChangedTrait;
+  use EntityPublishedTrait;
 
   /**
    * Whether the node is being previewed or not.
@@ -101,8 +107,8 @@ class Node extends ContentEntityBase implements NodeInterface {
 
     // If no revision author has been set explicitly, make the node owner the
     // revision author.
-    if (!$this->getRevisionAuthor()) {
-      $this->setRevisionAuthorId($this->getOwnerId());
+    if (!$this->getRevisionUser()) {
+      $this->setRevisionUserId($this->getOwnerId());
     }
   }
 
@@ -131,7 +137,10 @@ class Node extends ContentEntityBase implements NodeInterface {
     // default revision. There's no need to delete existing records if the node
     // is new.
     if ($this->isDefaultRevision()) {
-      \Drupal::entityManager()->getAccessControlHandler('node')->writeGrants($this, $update);
+      /** @var \Drupal\node\NodeAccessControlHandlerInterface $access_control_handler */
+      $access_control_handler = \Drupal::entityManager()->getAccessControlHandler('node');
+      $grants = $access_control_handler->acquireGrants($this);
+      \Drupal::service('node.grant_storage')->write($this, $grants, NULL, $update);
     }
 
     // Reindex the node when it is updated. The node is automatically indexed
@@ -174,13 +183,8 @@ class Node extends ContentEntityBase implements NodeInterface {
    * {@inheritdoc}
    */
   public function access($operation = 'view', AccountInterface $account = NULL, $return_as_object = FALSE) {
-    if ($operation == 'create') {
-      return parent::access($operation, $account, $return_as_object);
-    }
-
-    return \Drupal::entityManager()
-      ->getAccessControlHandler($this->entityTypeId)
-      ->access($this, $operation, $account, $return_as_object);
+    // This override exists to set the operation to the default value "view".
+    return parent::access($operation, $account, $return_as_object);
   }
 
   /**
@@ -225,7 +229,7 @@ class Node extends ContentEntityBase implements NodeInterface {
    * {@inheritdoc}
    */
   public function setPromoted($promoted) {
-    $this->set('promote', $promoted ? NODE_PROMOTED : NODE_NOT_PROMOTED);
+    $this->set('promote', $promoted ? NodeInterface::PROMOTED : NodeInterface::NOT_PROMOTED);
     return $this;
   }
 
@@ -240,21 +244,7 @@ class Node extends ContentEntityBase implements NodeInterface {
    * {@inheritdoc}
    */
   public function setSticky($sticky) {
-    $this->set('sticky', $sticky ? NODE_STICKY : NODE_NOT_STICKY);
-    return $this;
-  }
-  /**
-   * {@inheritdoc}
-   */
-  public function isPublished() {
-    return (bool) $this->getEntityKey('status');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setPublished($published) {
-    $this->set('status', $published ? NODE_PUBLISHED : NODE_NOT_PUBLISHED);
+    $this->set('sticky', $sticky ? NodeInterface::STICKY : NodeInterface::NOT_STICKY);
     return $this;
   }
 
@@ -307,6 +297,13 @@ class Node extends ContentEntityBase implements NodeInterface {
    * {@inheritdoc}
    */
   public function getRevisionAuthor() {
+    return $this->getRevisionUser();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRevisionUser() {
     return $this->get('revision_uid')->entity;
   }
 
@@ -314,7 +311,45 @@ class Node extends ContentEntityBase implements NodeInterface {
    * {@inheritdoc}
    */
   public function setRevisionAuthorId($uid) {
-    $this->set('revision_uid', $uid);
+    $this->setRevisionUserId($uid);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setRevisionUser(UserInterface $user) {
+    $this->set('revision_uid', $user);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRevisionUserId() {
+    return $this->get('revision_uid')->entity->id();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setRevisionUserId($user_id) {
+    $this->set('revision_uid', $user_id);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getRevisionLogMessage() {
+    return $this->get('revision_log')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setRevisionLogMessage($revision_log_message) {
+    $this->set('revision_log', $revision_log_message);
     return $this;
   }
 
@@ -322,41 +357,8 @@ class Node extends ContentEntityBase implements NodeInterface {
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
-    $fields['nid'] = BaseFieldDefinition::create('integer')
-      ->setLabel(t('Node ID'))
-      ->setDescription(t('The node ID.'))
-      ->setReadOnly(TRUE)
-      ->setSetting('unsigned', TRUE);
-
-    $fields['uuid'] = BaseFieldDefinition::create('uuid')
-      ->setLabel(t('UUID'))
-      ->setDescription(t('The node UUID.'))
-      ->setReadOnly(TRUE);
-
-    $fields['vid'] = BaseFieldDefinition::create('integer')
-      ->setLabel(t('Revision ID'))
-      ->setDescription(t('The node revision ID.'))
-      ->setReadOnly(TRUE)
-      ->setSetting('unsigned', TRUE);
-
-    $fields['type'] = BaseFieldDefinition::create('entity_reference')
-      ->setLabel(t('Type'))
-      ->setDescription(t('The node type.'))
-      ->setSetting('target_type', 'node_type')
-      ->setReadOnly(TRUE);
-
-    $fields['langcode'] = BaseFieldDefinition::create('language')
-      ->setLabel(t('Language'))
-      ->setDescription(t('The node language code.'))
-      ->setTranslatable(TRUE)
-      ->setRevisionable(TRUE)
-      ->setDisplayOptions('view', array(
-        'type' => 'hidden',
-      ))
-      ->setDisplayOptions('form', array(
-        'type' => 'language_select',
-        'weight' => 2,
-      ));
+    $fields = parent::baseFieldDefinitions($entity_type);
+    $fields += static::publishedBaseFieldDefinitions($entity_type);
 
     $fields['title'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Title'))
@@ -397,13 +399,6 @@ class Node extends ContentEntityBase implements NodeInterface {
         ),
       ))
       ->setDisplayConfigurable('form', TRUE);
-
-    $fields['status'] = BaseFieldDefinition::create('boolean')
-      ->setLabel(t('Publishing status'))
-      ->setDescription(t('A boolean indicating whether the node is published.'))
-      ->setRevisionable(TRUE)
-      ->setTranslatable(TRUE)
-      ->setDefaultValue(TRUE);
 
     $fields['created'] = BaseFieldDefinition::create('created')
       ->setLabel(t('Authored on'))

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\locale\Tests\LocaleLocaleLookupTest.
- */
-
 namespace Drupal\locale\Tests;
 
 use Drupal\language\Entity\ConfigurableLanguage;
@@ -27,7 +22,7 @@ class LocaleLocaleLookupTest extends WebTestBase {
   /**
    * {@inheritdoc}
    */
-  public function setUp() {
+  protected function setUp() {
     parent::setUp();
 
     // Change the language default object to different values.
@@ -42,7 +37,7 @@ class LocaleLocaleLookupTest extends WebTestBase {
    */
   public function testCircularDependency() {
     // Ensure that we can enable early_translation_test on a non-english site.
-    $this->drupalPostForm('admin/modules', array('modules[Testing][early_translation_test][enable]' => TRUE), t('Install'));
+    $this->drupalPostForm('admin/modules', array('modules[early_translation_test][enable]' => TRUE), t('Install'));
     $this->assertResponse(200);
   }
 

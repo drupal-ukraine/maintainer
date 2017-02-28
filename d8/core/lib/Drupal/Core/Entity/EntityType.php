@@ -1,22 +1,19 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\EntityType.
- */
-
 namespace Drupal\Core\Entity;
 
+use Drupal\Component\Plugin\Definition\PluginDefinition;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Entity\Exception\EntityTypeIdLengthException;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
  * Provides an implementation of an entity type and its metadata.
  *
  * @ingroup entity_api
  */
-class EntityType implements EntityTypeInterface {
+class EntityType extends PluginDefinition implements EntityTypeInterface {
 
   use StringTranslationTrait;
 
@@ -54,20 +51,6 @@ class EntityType implements EntityTypeInterface {
    * @var string
    */
   protected $id;
-
-  /**
-   * The name of the provider of this entity type.
-   *
-   * @var string
-   */
-  protected $provider;
-
-  /**
-   * The name of the entity type class.
-   *
-   * @var string
-   */
-  protected $class;
 
   /**
    * The name of the original entity type class.
@@ -179,11 +162,48 @@ class EntityType implements EntityTypeInterface {
   protected $translatable = FALSE;
 
   /**
+   * Indicates whether the revision form fields should be added to the form.
+   *
+   * @var bool
+   */
+  protected $show_revision_ui = FALSE;
+
+  /**
    * The human-readable name of the type.
    *
    * @var string
    */
   protected $label = '';
+
+  /**
+   * The human-readable label for a collection of entities of the type.
+   *
+   * @var string
+   */
+  protected $label_collection = '';
+
+  /**
+   * The indefinite singular name of the type.
+   *
+   * @var string
+   */
+  protected $label_singular = '';
+
+  /**
+   * The indefinite plural name of the type.
+   *
+   * @var string
+   */
+  protected $label_plural = '';
+
+  /**
+   * A definite singular/plural name of the type.
+   *
+   * Needed keys: "singular" and "plural".
+   *
+   * @var string[]
+   */
+  protected $label_count = [];
 
   /**
    * A callable that can be used to provide the entity URI.
@@ -282,7 +302,7 @@ class EntityType implements EntityTypeInterface {
 
     // Automatically add the EntityChanged constraint if the entity type tracks
     // the changed time.
-    if ($this->isSubclassOf('Drupal\Core\Entity\EntityChangedInterface') ) {
+    if ($this->entityClassImplements(EntityChangedInterface::class) ) {
       $this->addConstraint('EntityChanged');
     }
 
@@ -290,7 +310,6 @@ class EntityType implements EntityTypeInterface {
     if (empty($this->list_cache_tags)) {
       $this->list_cache_tags = [$definition['id'] . '_list'];
     }
-
   }
 
   /**
@@ -366,27 +385,6 @@ class EntityType implements EntityTypeInterface {
   /**
    * {@inheritdoc}
    */
-  public function id() {
-    return $this->id;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getProvider() {
-    return $this->provider;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getClass() {
-    return $this->class;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function getOriginalClass() {
     return $this->originalClass ?: $this->class;
   }
@@ -400,15 +398,22 @@ class EntityType implements EntityTypeInterface {
       // class, assume that is the original class name.
       $this->originalClass = $this->class;
     }
-    $this->class = $class;
-    return $this;
+
+    return parent::setClass($class);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entityClassImplements($interface) {
+    return is_subclass_of($this->getClass(), $interface);
   }
 
   /**
    * {@inheritdoc}
    */
   public function isSubclassOf($class) {
-    return is_subclass_of($this->getClass(), $class);
+    return $this->entityClassImplements($class);
   }
 
   /**
@@ -464,6 +469,7 @@ class EntityType implements EntityTypeInterface {
   public function setStorageClass($class) {
     $this->checkStorageClass($class);
     $this->handlers['storage'] = $class;
+    return $this;
   }
 
   /**
@@ -673,6 +679,13 @@ class EntityType implements EntityTypeInterface {
   /**
    * {@inheritdoc}
    */
+  public function showRevisionUi() {
+    return $this->isRevisionable() && $this->show_revision_ui;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function isTranslatable() {
     return !empty($this->translatable);
   }
@@ -718,6 +731,50 @@ class EntityType implements EntityTypeInterface {
    */
   public function getLowercaseLabel() {
     return Unicode::strtolower($this->getLabel());
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCollectionLabel() {
+    if (empty($this->label_collection)) {
+      $label = $this->getLabel();
+      $this->label_collection = new TranslatableMarkup('@label entities', ['@label' => $label], [], $this->getStringTranslation());
+    }
+    return $this->label_collection;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSingularLabel() {
+    if (empty($this->label_singular)) {
+      $lowercase_label = $this->getLowercaseLabel();
+      $this->label_singular = $lowercase_label;
+    }
+    return $this->label_singular;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getPluralLabel() {
+    if (empty($this->label_plural)) {
+      $lowercase_label = $this->getLowercaseLabel();
+      $this->label_plural = new TranslatableMarkup('@label entities', ['@label' => $lowercase_label], [], $this->getStringTranslation());
+    }
+    return $this->label_plural;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCountLabel($count) {
+    if (empty($this->label_count)) {
+      return $this->formatPlural($count, '@count @label', '@count @label entities', ['@label' => $this->getLowercaseLabel()], ['context' => 'Entity type label']);
+    }
+    $context = isset($this->label_count['context']) ? $this->label_count['context'] : 'Entity type label';
+    return $this->formatPlural($count, $this->label_count['singular'], $this->label_count['plural'], ['context' => $context]);
   }
 
   /**

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\user\Tests\UserEditTest.
- */
-
 namespace Drupal\user\Tests;
 
 use Drupal\simpletest\WebTestBase;
@@ -29,6 +24,13 @@ class UserEditTest extends WebTestBase {
     $edit['name'] = $user2->getUsername();
     $this->drupalPostForm("user/" . $user1->id() . "/edit", $edit, t('Save'));
     $this->assertRaw(t('The username %name is already taken.', array('%name' => $edit['name'])));
+
+    // Check that the default value in user name field
+    // is the raw value and not a formatted one.
+    \Drupal::state()->set('user_hooks_test_user_format_name_alter', TRUE);
+    \Drupal::service('module_installer')->install(['user_hooks_test']);
+    $this->drupalGet('user/' . $user1->id() . '/edit');
+    $this->assertFieldByName('name', $user1->getAccountName());
 
     // Check that filling out a single password field does not validate.
     $edit = array();
@@ -141,4 +143,5 @@ class UserEditTest extends WebTestBase {
     $this->drupalPostForm("user/" . $user1->id() . "/edit", array('mail' => ''), t('Save'));
     $this->assertRaw(t("The changes have been saved."));
   }
+
 }

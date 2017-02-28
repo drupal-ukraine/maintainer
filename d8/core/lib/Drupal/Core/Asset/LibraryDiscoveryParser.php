@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Asset\LibraryDiscoveryParser.
- */
-
 namespace Drupal\Core\Asset;
 
 use Drupal\Core\Asset\Exception\IncompleteLibraryDefinitionException;
@@ -12,9 +7,9 @@ use Drupal\Core\Asset\Exception\InvalidLibrariesOverrideSpecificationException;
 use Drupal\Core\Asset\Exception\InvalidLibraryFileException;
 use Drupal\Core\Asset\Exception\LibraryDefinitionMissingLicenseException;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Serialization\Yaml;
 use Drupal\Core\Theme\ThemeManagerInterface;
 use Drupal\Component\Serialization\Exception\InvalidDataTypeException;
-use Drupal\Component\Serialization\Yaml;
 use Drupal\Component\Utility\NestedArray;
 
 /**
@@ -50,6 +45,8 @@ class LibraryDiscoveryParser {
    *   The app root.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $module_handler
    *   The module handler.
+   * @param \Drupal\Core\Theme\ThemeManagerInterface $theme_manager
+   *   The theme manager.
    */
   public function __construct($root, ModuleHandlerInterface $module_handler, ThemeManagerInterface $theme_manager) {
     $this->root = $root;

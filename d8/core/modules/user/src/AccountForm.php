@@ -1,17 +1,13 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\user\AccountForm.
- */
-
 namespace Drupal\user;
 
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Entity\ContentEntityForm;
 use Drupal\Core\Entity\EntityConstraintViolationListInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
@@ -33,26 +29,20 @@ abstract class AccountForm extends ContentEntityForm {
   protected $languageManager;
 
   /**
-   * The entity query factory service.
-   *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
-   */
-  protected $entityQuery;
-
-  /**
    * Constructs a new EntityForm object.
    *
    * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
    *   The entity manager.
    * @param \Drupal\Core\Language\LanguageManagerInterface $language_manager
    *   The language manager.
-   * @param \Drupal\Core\Entity\Query\QueryFactory $entity_query
-   *   The entity query factory.
+   * @param \Drupal\Core\Entity\EntityTypeBundleInfoInterface $entity_type_bundle_info
+   *   The entity type bundle service.
+   * @param \Drupal\Component\Datetime\TimeInterface $time
+   *   The time service.
    */
-  public function __construct(EntityManagerInterface $entity_manager, LanguageManagerInterface $language_manager, QueryFactory $entity_query) {
-    parent::__construct($entity_manager);
+  public function __construct(EntityManagerInterface $entity_manager, LanguageManagerInterface $language_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info = NULL, TimeInterface $time = NULL) {
+    parent::__construct($entity_manager, $entity_type_bundle_info, $time);
     $this->languageManager = $language_manager;
-    $this->entityQuery = $entity_query;
   }
 
   /**
@@ -62,7 +52,8 @@ abstract class AccountForm extends ContentEntityForm {
     return new static(
       $container->get('entity.manager'),
       $container->get('language_manager'),
-      $container->get('entity.query')
+      $container->get('entity_type.bundle.info'),
+      $container->get('datetime.time')
     );
   }
 
@@ -111,7 +102,7 @@ abstract class AccountForm extends ContentEntityForm {
         'autocapitalize' => 'off',
         'spellcheck' => 'false',
       ),
-      '#default_value' => (!$register ? $account->getUsername() : ''),
+      '#default_value' => (!$register ? $account->getAccountName() : ''),
       '#access' => ($register || ($user->id() == $account->id() && $user->hasPermission('change own username')) || $admin),
     );
 
@@ -127,8 +118,9 @@ abstract class AccountForm extends ContentEntityForm {
       // To skip the current password field, the user must have logged in via a
       // one-time link and have the token in the URL. Store this in $form_state
       // so it persists even on subsequent Ajax requests.
-      if (!$form_state->get('user_pass_reset')) {
-        $user_pass_reset = isset($_SESSION['pass_reset_' . $account->id()]) && Crypt::hashEquals($_SESSION['pass_reset_' . $account->id()], \Drupal::request()->query->get('pass-reset-token'));
+      if (!$form_state->get('user_pass_reset') && ($token = $this->getRequest()->get('pass-reset-token'))) {
+        $session_key = 'pass_reset_' . $account->id();
+        $user_pass_reset = isset($_SESSION[$session_key]) && Crypt::hashEquals($_SESSION[$session_key], $token);
         $form_state->set('user_pass_reset', $user_pass_reset);
       }
 
@@ -269,7 +261,7 @@ abstract class AccountForm extends ContentEntityForm {
     // language. This entity builder provides that synchronization. For
     // use-cases where this synchronization is not desired, a module can alter
     // or remove this item.
-    $form['#entity_builders']['sync_user_langcode'] = [$this, 'syncUserLangcode'];
+    $form['#entity_builders']['sync_user_langcode'] = '::syncUserLangcode';
 
     return parent::form($form, $form_state, $account);
   }
@@ -391,8 +383,9 @@ abstract class AccountForm extends ContentEntityForm {
     $user = $this->getEntity($form_state);
     // If there's a session set to the users id, remove the password reset tag
     // since a new password was saved.
-    if (isset($_SESSION['pass_reset_'. $user->id()])) {
-      unset($_SESSION['pass_reset_'. $user->id()]);
+    if (isset($_SESSION['pass_reset_' . $user->id()])) {
+      unset($_SESSION['pass_reset_' . $user->id()]);
     }
   }
+
 }

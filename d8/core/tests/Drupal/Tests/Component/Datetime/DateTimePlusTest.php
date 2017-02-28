@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\Component\Datetime\DateTimePlusTest.
- */
-
 namespace Drupal\Tests\Component\Datetime;
 
 use Drupal\Tests\UnitTestCase;
@@ -61,17 +56,55 @@ class DateTimePlusTest extends UnitTestCase {
   }
 
   /**
+   * Test date diffs.
+   *
+   * @param mixed $input1
+   *   A DateTimePlus object.
+   * @param mixed $input2
+   *   Date argument for DateTimePlus::diff method.
+   * @param bool $absolute
+   *   Absolute flag for DateTimePlus::diff method.
+   * @param \DateInterval $expected
+   *   The expected result of the DateTimePlus::diff operation.
+   *
+   * @dataProvider providerTestDateDiff
+   */
+  public function testDateDiff($input1, $input2, $absolute, \DateInterval $expected) {
+    $interval = $input1->diff($input2, $absolute);
+    $this->assertEquals($interval, $expected);
+  }
+
+  /**
+   * Test date diff exception caused by invalid input.
+   *
+   * @param mixed $input1
+   *   A DateTimePlus object.
+   * @param mixed $input2
+   *   Date argument for DateTimePlus::diff method.
+   * @param bool $absolute
+   *   Absolute flag for DateTimePlus::diff method.
+   *
+   * @dataProvider providerTestInvalidDateDiff
+   */
+  public function testInvalidDateDiff($input1, $input2, $absolute) {
+    $this->setExpectedException(\BadMethodCallException::class, 'Method Drupal\Component\Datetime\DateTimePlus::diff expects parameter 1 to be a \DateTime or \Drupal\Component\Datetime\DateTimePlus object');
+    $interval = $input1->diff($input2, $absolute);
+  }
+
+  /**
    * Test creating dates from invalid array input.
    *
    * @param mixed $input
    *   Input argument for DateTimePlus.
    * @param string $timezone
    *   Timezone argument for DateTimePlus.
+   * @param string $class
+   *   The Exception subclass to expect to be thrown.
    *
    * @dataProvider providerTestInvalidDateArrays
-   * @expectedException \Exception
    */
-  public function testInvalidDateArrays($input, $timezone) {
+  public function testInvalidDateArrays($input, $timezone, $class) {
+    $this->setExpectedException($class);
     $this->assertInstanceOf(
       '\Drupal\Component\DateTimePlus',
       DateTimePlus::createFromArray($input, $timezone)
@@ -203,11 +236,13 @@ class DateTimePlusTest extends UnitTestCase {
    *   Format argument for DateTimePlus.
    * @param string $message
    *   Message to print if no errors are thrown by the invalid dates.
+   * @param string $class
+   *   The Exception subclass to expect to be thrown.
    *
    * @dataProvider providerTestInvalidDates
-   * @expectedException \Exception
    */
-  public function testInvalidDates($input, $timezone, $format, $message) {
+  public function testInvalidDates($input, $timezone, $format, $message, $class) {
+    $this->setExpectedException($class);
     DateTimePlus::createFromFormat($format, $input, $timezone);
   }
 
@@ -255,7 +290,7 @@ class DateTimePlusTest extends UnitTestCase {
    *   An array of arrays, each containing the input parameters for
    *   DateTimePlusTest::testDates().
    *
-   * @see DateTimePlusTest::testDates().
+   * @see DateTimePlusTest::testDates()
    */
   public function providerTestDates() {
     return array(
@@ -282,7 +317,7 @@ class DateTimePlusTest extends UnitTestCase {
    *   An array of arrays, each containing the input parameters for
    *   DateTimePlusTest::testDates().
    *
-   * @see DateTimePlusTest::testDates().
+   * @see DateTimePlusTest::testDates()
    */
   public function providerTestDateArrays() {
     return array(
@@ -340,15 +375,15 @@ class DateTimePlusTest extends UnitTestCase {
     return array(
       // Test for invalid month names when we are using a short version
       // of the month.
-      array('23 abc 2012', NULL, 'd M Y', "23 abc 2012 contains an invalid month name and did not produce errors."),
+      array('23 abc 2012', NULL, 'd M Y', "23 abc 2012 contains an invalid month name and did not produce errors.", \InvalidArgumentException::class),
       // Test for invalid hour.
-      array('0000-00-00T45:30:00', NULL, 'Y-m-d\TH:i:s', "0000-00-00T45:30:00 contains an invalid hour and did not produce errors."),
+      array('0000-00-00T45:30:00', NULL, 'Y-m-d\TH:i:s', "0000-00-00T45:30:00 contains an invalid hour and did not produce errors.", \UnexpectedValueException::class),
       // Test for invalid day.
-      array('0000-00-99T05:30:00', NULL, 'Y-m-d\TH:i:s', "0000-00-99T05:30:00 contains an invalid day and did not produce errors."),
+      array('0000-00-99T05:30:00', NULL, 'Y-m-d\TH:i:s', "0000-00-99T05:30:00 contains an invalid day and did not produce errors.", \UnexpectedValueException::class),
       // Test for invalid month.
-      array('0000-75-00T15:30:00', NULL, 'Y-m-d\TH:i:s', "0000-75-00T15:30:00 contains an invalid month and did not produce errors."),
+      array('0000-75-00T15:30:00', NULL, 'Y-m-d\TH:i:s', "0000-75-00T15:30:00 contains an invalid month and did not produce errors.", \UnexpectedValueException::class),
       // Test for invalid year.
-      array('11-08-01T15:30:00', NULL, 'Y-m-d\TH:i:s', "11-08-01T15:30:00 contains an invalid year and did not produce errors."),
+      array('11-08-01T15:30:00', NULL, 'Y-m-d\TH:i:s', "11-08-01T15:30:00 contains an invalid year and did not produce errors.", \UnexpectedValueException::class),
 
     );
   }
@@ -366,17 +401,17 @@ class DateTimePlusTest extends UnitTestCase {
   public function providerTestInvalidDateArrays() {
     return array(
       // One year larger than the documented upper limit of checkdate().
-      array(array('year' => 32768, 'month' => 1, 'day' => 8, 'hour' => 8, 'minute' => 0, 'second' => 0), 'America/Chicago'),
+      array(array('year' => 32768, 'month' => 1, 'day' => 8, 'hour' => 8, 'minute' => 0, 'second' => 0), 'America/Chicago', \InvalidArgumentException::class),
       // One year smaller than the documented lower limit of checkdate().
-      array(array('year' => 0, 'month' => 1, 'day' => 8, 'hour' => 8, 'minute' => 0, 'second' => 0), 'America/Chicago'),
+      array(array('year' => 0, 'month' => 1, 'day' => 8, 'hour' => 8, 'minute' => 0, 'second' => 0), 'America/Chicago', \InvalidArgumentException::class),
       // Test for invalid month from date array.
-      array(array('year' => 2010, 'month' => 27, 'day' => 8, 'hour' => 8, 'minute' => 0, 'second' => 0), 'America/Chicago'),
+      array(array('year' => 2010, 'month' => 27, 'day' => 8, 'hour' => 8, 'minute' => 0, 'second' => 0), 'America/Chicago', \InvalidArgumentException::class),
       // Test for invalid hour from date array.
-      array(array('year' => 2010, 'month' => 2, 'day' => 28, 'hour' => 80, 'minute' => 0, 'second' => 0), 'America/Chicago'),
+      array(array('year' => 2010, 'month' => 2, 'day' => 28, 'hour' => 80, 'minute' => 0, 'second' => 0), 'America/Chicago', \InvalidArgumentException::class),
       // Test for invalid minute from date array.
-      array(array('year' => 2010, 'month' => 7, 'day' => 8, 'hour' => 8, 'minute' => 88, 'second' => 0), 'America/Chicago'),
+      array(array('year' => 2010, 'month' => 7, 'day' => 8, 'hour' => 8, 'minute' => 88, 'second' => 0), 'America/Chicago', \InvalidArgumentException::class),
       // Regression test for https://www.drupal.org/node/2084455.
-      array(array('hour' => 59, 'minute' => 1,'second' => 1), 'America/Chicago'),
+      array(array('hour' => 59, 'minute' => 1, 'second' => 1), 'America/Chicago', \InvalidArgumentException::class),
     );
   }
 
@@ -529,6 +564,108 @@ class DateTimePlusTest extends UnitTestCase {
           'expected_timezone' => 'UTC',
           'expected_offset' => 0,
         ),
+      ),
+    );
+  }
+
+  /**
+   * Provides data for date tests.
+   *
+   * @return array
+   *   An array of arrays, each containing the input parameters for
+   *   DateTimePlusTest::testDateDiff().
+   *
+   * @see DateTimePlusTest::testDateDiff()
+   */
+  public function providerTestDateDiff() {
+
+    $empty_interval = new \DateInterval('PT0S');
+
+    $positive_19_hours = new \DateInterval('PT19H');
+
+    $positive_18_hours = new \DateInterval('PT18H');
+
+    $positive_1_hour = new \DateInterval('PT1H');
+
+    $negative_1_hour = new \DateInterval('PT1H');
+    $negative_1_hour->invert = 1;
+
+    return array(
+      // There should be a 19 hour time interval between
+      // new years in Sydney and new years in LA in year 2000.
+      array(
+        'input2' => DateTimePlus::createFromFormat('Y-m-d H:i:s', '2000-01-01 00:00:00', new \DateTimeZone('Australia/Sydney')),
+        'input1' => DateTimePlus::createFromFormat('Y-m-d H:i:s', '2000-01-01 00:00:00', new \DateTimeZone('America/Los_Angeles')),
+        'absolute' => FALSE,
+        'expected' => $positive_19_hours,
+      ),
+      // In 1970 Sydney did not observe daylight savings time
+      // So there is only a 18 hour time interval.
+      array(
+        'input2' => DateTimePlus::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00', new \DateTimeZone('Australia/Sydney')),
+        'input1' => DateTimePlus::createFromFormat('Y-m-d H:i:s', '1970-01-01 00:00:00', new \DateTimeZone('America/Los_Angeles')),
+        'absolute' => FALSE,
+        'expected' => $positive_18_hours,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600, new \DateTimeZone('America/Los_Angeles')),
+        'input2' => DateTimePlus::createFromFormat('U', 0, new \DateTimeZone('UTC')),
+        'absolute' => FALSE,
+        'expected' => $negative_1_hour,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600),
+        'input2' => DateTimePlus::createFromFormat('U', 0),
+        'absolute' => FALSE,
+        'expected' => $negative_1_hour,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600),
+        'input2' => \DateTime::createFromFormat('U', 0),
+        'absolute' => FALSE,
+        'expected' => $negative_1_hour,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600),
+        'input2' => DateTimePlus::createFromFormat('U', 0),
+        'absolute' => TRUE,
+        'expected' => $positive_1_hour,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600),
+        'input2' => \DateTime::createFromFormat('U', 0),
+        'absolute' => TRUE,
+        'expected' => $positive_1_hour,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 0),
+        'input2' => DateTimePlus::createFromFormat('U', 0),
+        'absolute' => FALSE,
+        'expected' => $empty_interval,
+      ),
+    );
+  }
+
+  /**
+   * Provides data for date tests.
+   *
+   * @return array
+   *   An array of arrays, each containing the input parameters for
+   *   DateTimePlusTest::testInvalidDateDiff().
+   *
+   * @see DateTimePlusTest::testInvalidDateDiff()
+   */
+  public function providerTestInvalidDateDiff() {
+    return array(
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600),
+        'input2' => '1970-01-01 00:00:00',
+        'absolute' => FALSE,
+      ),
+      array(
+        'input1' => DateTimePlus::createFromFormat('U', 3600),
+        'input2' => NULL,
+        'absolute' => FALSE,
       ),
     );
   }

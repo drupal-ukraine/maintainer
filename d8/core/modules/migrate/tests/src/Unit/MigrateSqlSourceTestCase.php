@@ -1,16 +1,18 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\migrate\Unit\MigrateSqlSourceTestCase.
- */
-
 namespace Drupal\Tests\migrate\Unit;
 
 use Drupal\Core\Database\Query\SelectInterface;
+use Drupal\Core\DependencyInjection\ContainerBuilder;
+use Drupal\Core\DependencyInjection\ContainerNotInitializedException;
+use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
+use Drupal\Core\KeyValueStore\KeyValueStoreInterface;
 
 /**
  * Base class for Migrate module source unit tests.
+ *
+ * @deprecated in Drupal 8.2.0, will be removed before Drupal 9.0.0. Use
+ * \Drupal\Tests\migrate\Kernel\MigrateSqlSourceTestBase instead.
  */
 abstract class MigrateSqlSourceTestCase extends MigrateTestCase {
 
@@ -49,9 +51,9 @@ abstract class MigrateSqlSourceTestCase extends MigrateTestCase {
    * Once the migration is run, we save a mark of the migrated sources, so the
    * migration can run again and update only new sources or changed sources.
    *
-   * @var string
+   * @var mixed
    */
-  const ORIGINAL_HIGH_WATER = '';
+  const ORIGINAL_HIGH_WATER = NULL;
 
   /**
    * Expected results after the source parsing.
@@ -82,6 +84,27 @@ abstract class MigrateSqlSourceTestCase extends MigrateTestCase {
     $state = $this->getMock('Drupal\Core\State\StateInterface');
     $entity_manager = $this->getMock('Drupal\Core\Entity\EntityManagerInterface');
 
+    // Mock a key-value store to return high-water values.
+    $key_value = $this->getMock(KeyValueStoreInterface::class);
+
+    // SourcePluginBase does not yet support full dependency injection so we
+    // need to make sure that \Drupal::keyValue() works as expected by mocking
+    // the keyvalue service.
+    $key_value_factory = $this->getMock(KeyValueFactoryInterface::class);
+    $key_value_factory
+      ->method('get')
+      ->with('migrate:high_water')
+      ->willReturn($key_value);
+
+    try {
+      $container = \Drupal::getContainer();
+    }
+    catch (ContainerNotInitializedException $e) {
+      $container = new ContainerBuilder();
+    }
+    $container->set('keyvalue', $key_value_factory);
+    \Drupal::setContainer($container);
+
     $migration = $this->getMigration();
     $migration->expects($this->any())
       ->method('getHighWater')
@@ -111,7 +134,7 @@ abstract class MigrateSqlSourceTestCase extends MigrateTestCase {
   }
 
   /**
-   * Test the source returns the same rows as expected.
+   * Tests that the source returns the same rows as expected.
    */
   public function testRetrieval() {
     $this->assertInstanceOf(SelectInterface::class, $this->source->query());
@@ -119,25 +142,31 @@ abstract class MigrateSqlSourceTestCase extends MigrateTestCase {
   }
 
   /**
-   * Test the source returns the row count expected.
+   * Tests that the source returns the row count expected.
    */
   public function testSourceCount() {
     $count = $this->source->count();
     $this->assertTrue(is_numeric($count));
-    $this->assertEquals($count, $this->expectedCount);
+    $this->assertEquals($this->expectedCount, $count);
   }
 
   /**
-   * Test the source defines a valid ID.
+   * Tests the source defines a valid ID.
    */
   public function testSourceId() {
     $this->assertNotEmpty($this->source->getIds());
   }
 
   /**
+   * Gets the value on a row for a given key.
+   *
    * @param \Drupal\migrate\Row $row
+   *   The row identifier.
    * @param string $key
+   *   The key identifier.
+   *
    * @return mixed
+   *   The value on a row for a given key.
    */
   protected function getValue($row, $key) {
     return $row->getSourceProperty($key);

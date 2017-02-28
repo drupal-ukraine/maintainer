@@ -1,15 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\simpletest\Form\SimpletestTestForm.
- */
-
 namespace Drupal\simpletest\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\simpletest\TestDiscovery;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -25,11 +21,19 @@ class SimpletestTestForm extends FormBase {
   protected $renderer;
 
   /**
+   * The test discovery service.
+   *
+   * @var \Drupal\simpletest\TestDiscovery
+   */
+  protected $testDiscovery;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('renderer')
+      $container->get('renderer'),
+      $container->get('test_discovery')
     );
   }
 
@@ -38,9 +42,12 @@ class SimpletestTestForm extends FormBase {
    *
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The renderer.
+   * @param \Drupal\simpletest\TestDiscovery $test_discovery
+   *   The test discovery service.
    */
-  public function __construct(RendererInterface $renderer) {
+  public function __construct(RendererInterface $renderer, TestDiscovery $test_discovery) {
     $this->renderer = $renderer;
+    $this->testDiscovery = $test_discovery;
   }
 
   /**
@@ -141,7 +148,7 @@ class SimpletestTestForm extends FormBase {
     ];
 
     // Generate the list of tests arranged by group.
-    $groups = simpletest_test_get_all();
+    $groups = $this->testDiscovery->getTestClasses();
     foreach ($groups as $group => $tests) {
       $form['tests'][$group] = array(
         '#attributes' => array('class' => array('simpletest-group')),
@@ -204,9 +211,8 @@ class SimpletestTestForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    global $base_url;
     // Test discovery does not run upon form submission.
-    simpletest_classloader_register();
+    $this->testDiscovery->registerTestNamespaces();
 
     // This form accepts arbitrary user input for 'tests'.
     // An invalid value will cause the $class_name lookup below to die with a
@@ -222,20 +228,8 @@ class SimpletestTestForm extends FormBase {
       $form_state->setValue('tests', $user_input['tests']);
     }
 
-    $tests_list = array();
-    foreach ($form_state->getValue('tests') as $class_name => $value) {
-      if ($value === $class_name) {
-        if (is_subclass_of($class_name, 'PHPUnit_Framework_TestCase')) {
-          $test_type = 'phpunit';
-        }
-        else {
-          $test_type = 'simpletest';
-        }
-        $tests_list[$test_type][] = $class_name;
-      }
-    }
+    $tests_list = array_filter($form_state->getValue('tests'));
     if (!empty($tests_list)) {
-      putenv('SIMPLETEST_BASE_URL=' . $base_url);
       $test_id = simpletest_run_tests($tests_list, 'drupal');
       $form_state->setRedirect(
         'simpletest.result_form',

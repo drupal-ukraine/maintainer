@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\migrate\Row.
- */
-
 namespace Drupal\migrate;
 
 use Drupal\Component\Utility\NestedArray;
@@ -96,7 +91,7 @@ class Row {
    * @throws \InvalidArgumentException
    *   Thrown when a source ID property does not exist.
    */
-  public function __construct(array $values, array $source_ids, $is_stub = FALSE) {
+  public function __construct(array $values = [], array $source_ids = [], $is_stub = FALSE) {
     $this->source = $values;
     $this->sourceIds = $source_ids;
     $this->isStub = $is_stub;
@@ -340,4 +335,5 @@ class Row {
   public function isStub() {
     return $this->isStub;
   }
+
 }

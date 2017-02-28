@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\locale\Tests\LocaleUpdateTest.
- */
-
 namespace Drupal\locale\Tests;
 
 use Drupal\Core\Language\LanguageInterface;
@@ -141,7 +136,7 @@ class LocaleUpdateTest extends LocaleUpdateBase {
     // Check the status on the Available translation status page.
     $this->assertRaw('<label for="edit-langcodes-de" class="visually-hidden">Update German</label>', 'German language found');
     $this->assertText('Updates for: Contributed module one, Contributed module two, Custom module one, Locale test', 'Updates found');
-    $this->assertText('Contributed module one (' . format_date($this->timestampNow, 'html_date') . ')', 'Updates for Contrib module one');
+    $this->assertText('Contributed module one (' . format_date($this->timestampNew, 'html_date') . ')', 'Updates for Contrib module one');
     $this->assertText('Contributed module two (' . format_date($this->timestampNew, 'html_date') . ')', 'Updates for Contrib module two');
 
     // Execute the translation update.
@@ -313,7 +308,7 @@ class LocaleUpdateTest extends LocaleUpdateBase {
 
     // Enable a module.
     $edit = array(
-      'modules[Testing][locale_test_translate][enable]' => 'locale_test_translate',
+      'modules[locale_test_translate][enable]' => 'locale_test_translate',
     );
     $this->drupalPostForm('admin/modules', $edit, t('Install'));
 
@@ -348,7 +343,7 @@ class LocaleUpdateTest extends LocaleUpdateBase {
 
     // Enable a module.
     $edit = array(
-      'modules[Testing][locale_test_translate][enable]' => 'locale_test_translate',
+      'modules[locale_test_translate][enable]' => 'locale_test_translate',
     );
     $this->drupalPostForm('admin/modules', $edit, t('Install'));
 
@@ -392,7 +387,7 @@ class LocaleUpdateTest extends LocaleUpdateBase {
 
     // Enable a module.
     $edit = array(
-      'modules[Testing][locale_test_translate][enable]' => 'locale_test_translate',
+      'modules[locale_test_translate][enable]' => 'locale_test_translate',
     );
     $this->drupalPostForm('admin/modules', $edit, t('Install'));
 

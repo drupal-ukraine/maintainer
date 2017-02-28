@@ -708,6 +708,7 @@
         // When the link is clicked, dynamically click the hidden form button
         // for adding a new filter group.
         .once('views-rearrange-filter-handler')
+        .find('#views-add-group-link')
         .on('click.views-rearrange-filter-handler', $.proxy(this, 'clickAddGroupButton'));
 
       // Find each (visually hidden) button for removing a filter group and
@@ -733,12 +734,7 @@
      *   The event triggered.
      */
     clickAddGroupButton: function (event) {
-      // Due to conflicts between Drupal core's AJAX system and the Views AJAX
-      // system, the only way to get this to work seems to be to trigger both
-      // the mousedown and submit events.
-      this.addGroupButton
-        .trigger('mousedown')
-        .trigger('submit');
+      this.addGroupButton.trigger('mousedown');
       event.preventDefault();
     },
 
@@ -750,7 +746,7 @@
      *   form button that should be clicked.
      */
     clickRemoveGroupButton: function (event) {
-      this.table.find('#' + event.data.buttonId).trigger('mousedown').trigger('submit');
+      this.table.find('#' + event.data.buttonId).trigger('mousedown');
       event.preventDefault();
     },
 
@@ -797,7 +793,7 @@
         newRow = $('<tr class="filter-group-operator-row"><td colspan="5"></td></tr>');
         newRow.find('td').append(fakeOperator);
         newRow.insertBefore(titleRow);
-        dropdowns = dropdowns.add(fakeOperator);
+        dropdowns.add(fakeOperator);
       }
 
       return dropdowns;

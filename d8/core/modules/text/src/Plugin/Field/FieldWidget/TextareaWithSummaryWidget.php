@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\text\Plugin\Field\FieldWidget\TextareaWithSummaryWidget.
- */
-
 namespace Drupal\text\Plugin\Field\FieldWidget;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -44,6 +39,7 @@ class TextareaWithSummaryWidget extends TextareaWidget {
       '#type' => 'number',
       '#title' => t('Summary rows'),
       '#default_value' => $this->getSetting('summary_rows'),
+      '#description' => $element['rows']['#description'],
       '#required' => TRUE,
       '#min' => 1,
     );

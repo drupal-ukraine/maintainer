@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\EntityViewBuilder.
- */
-
 namespace Drupal\Core\Entity;
 
+use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
@@ -14,6 +10,7 @@ use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Theme\Registry;
 use Drupal\Core\TypedData\TranslatableInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -60,6 +57,13 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
   protected $languageManager;
 
   /**
+   * The theme registry.
+   *
+   * @var \Drupal\Core\Theme\Registry
+   */
+  protected $themeRegistry;
+
+  /**
    * The EntityViewDisplay objects created for individual field rendering.
    *
    * @see \Drupal\Core\Entity\EntityViewBuilder::getSingleFieldDisplay()
@@ -77,12 +81,15 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
    *   The entity manager service.
    * @param \Drupal\Core\Language\LanguageManagerInterface $language_manager
    *   The language manager.
+   * @param \Drupal\Core\Theme\Registry $theme_registry
+   *   The theme registry.
    */
-  public function __construct(EntityTypeInterface $entity_type, EntityManagerInterface $entity_manager, LanguageManagerInterface $language_manager) {
+  public function __construct(EntityTypeInterface $entity_type, EntityManagerInterface $entity_manager, LanguageManagerInterface $language_manager, Registry $theme_registry = NULL) {
     $this->entityTypeId = $entity_type->id();
     $this->entityType = $entity_type;
     $this->entityManager = $entity_manager;
     $this->languageManager = $language_manager;
+    $this->themeRegistry = $theme_registry ?: \Drupal::service('theme.registry');
   }
 
   /**
@@ -92,7 +99,8 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
     return new static(
       $entity_type,
       $container->get('entity.manager'),
-      $container->get('language_manager')
+      $container->get('language_manager'),
+      $container->get('theme.registry')
     );
   }
 
@@ -100,16 +108,7 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
    * {@inheritdoc}
    */
   public function view(EntityInterface $entity, $view_mode = 'full', $langcode = NULL) {
-    $build_list = $this->viewMultiple(array($entity), $view_mode, $langcode);
-
-    // The default ::buildMultiple() #pre_render callback won't run, because we
-    // extract a child element of the default renderable array. Thus we must
-    // assign an alternative #pre_render callback that applies the necessary
-    // transformations and then still calls ::buildMultiple().
-    $build = $build_list[0];
-    $build['#pre_render'][] = array($this, 'build');
-
-    return $build;
+    return $this->viewMultiple(array($entity), $view_mode, $langcode)[0];
   }
 
   /**
@@ -118,7 +117,6 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
   public function viewMultiple(array $entities = array(), $view_mode = 'full', $langcode = NULL) {
     $build_list = array(
       '#sorted' => TRUE,
-      '#pre_render' => array(array($this, 'buildMultiple')),
     );
     $weight = 0;
     foreach ($entities as $key => $entity) {
@@ -131,6 +129,7 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
       $entityType = $this->entityTypeId;
       $this->moduleHandler()->alter(array($entityType . '_build_defaults', 'entity_build_defaults'), $build_list[$key], $entity, $view_mode);
 
+      $build_list[$key]['#pre_render'][] = array($this, 'build');
       $build_list[$key]['#weight'] = $weight++;
     }
 
@@ -153,7 +152,6 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
     $this->moduleHandler()->alter('entity_view_mode', $view_mode, $entity, $context);
 
     $build = array(
-      '#theme' => $this->entityTypeId,
       "#{$this->entityTypeId}" => $entity,
       '#view_mode' => $view_mode,
       // Collect cache defaults for this entity.
@@ -163,6 +161,11 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
         'max-age' => $entity->getCacheMaxAge(),
       ),
     );
+
+    // Add the default #theme key if a template exists for it.
+    if ($this->themeRegistry->getRuntime()->has($this->entityTypeId)) {
+      $build['#theme'] = $this->entityTypeId;
+    }
 
     // Cache the rendered output if permitted by the view mode and global entity
     // type configuration.
@@ -188,11 +191,12 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
   /**
    * Builds an entity's view; augments entity defaults.
    *
-   * This function is assigned as a #pre_render callback in ::view().
+   * This method is assigned as a #pre_render callback in ::viewMultiple() for
+   * each entity.
    *
-   * It transforms the renderable array for a single entity to the same
-   * structure as if we were rendering multiple entities, and then calls the
-   * default ::buildMultiple() #pre_render callback.
+   * It transforms the renderable array for a single entity to a structure
+   * understood by EntityViewBuilder::buildMultiple(), which is currently not
+   * called directly.
    *
    * @param array $build
    *   A renderable array containing build information and context for an entity
@@ -201,7 +205,8 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
    * @return array
    *   The updated renderable array.
    *
-   * @see drupal_render()
+   * @see \Drupal\Core\Render\RendererInterface
+   * @see \Drupal\Core\Entity\EntityViewBuilder::buildMultiple()
    */
   public function build(array $build) {
     $build_list = [$build];
@@ -212,11 +217,17 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
   /**
    * Builds multiple entities' views; augments entity defaults.
    *
-   * This function is assigned as a #pre_render callback in ::viewMultiple().
+   * This method is currently only called through EntityViewBuilder::build()
+   * as the render (cache) system does not support a #pre_render callback for
+   * multiple, separately cached render arrays.
    *
-   * By delaying the building of an entity until the #pre_render processing in
-   * drupal_render(), the processing cost of assembling an entity's renderable
-   * array is saved on cache-hit requests.
+   * @todo Either simplify this to remove support for building multiple entities
+   *   at once or support a #pre_render_multiple or similar API in the render
+   *   system.
+   *
+   * By delaying the building of an entity until the #pre_render processing, the
+   * processing cost of assembling an entity's renderable array is saved on
+   * cache-hit requests.
    *
    * @param array $build_list
    *   A renderable  array containing build information and context for an
@@ -451,7 +462,7 @@ class EntityViewBuilder extends EntityHandlerBase implements EntityHandlerInterf
       // series of fields individually for cases such as views tables.
       $entity_type_id = $entity->getEntityTypeId();
       $bundle = $entity->bundle();
-      $key = $entity_type_id . ':' . $bundle . ':' . $field_name . ':' . hash('crc32b', serialize($display_options));
+      $key = $entity_type_id . ':' . $bundle . ':' . $field_name . ':' . Crypt::hashBase64(serialize($display_options));
       if (!isset($this->singleFieldDisplays[$key])) {
         $this->singleFieldDisplays[$key] = EntityViewDisplay::create(array(
           'targetEntityType' => $entity_type_id,

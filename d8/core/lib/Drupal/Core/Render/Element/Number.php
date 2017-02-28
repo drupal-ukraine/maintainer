@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\Number.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -21,12 +16,13 @@ use Drupal\Component\Utility\Number as NumberUtility;
  * - #step: Ensures that the number is an even multiple of step, offset by #min
  *   if specified. A #min of 1 and a #step of 2 would allow values of 1, 3, 5,
  *   etc.
+ * - #size: The size of the input element in characters.
  *
  * Usage example:
  * @code
  * $form['quantity'] = array(
  *   '#type' => 'number',
- *   '#title' => t('Quantity'),
+ *   '#title' => $this->t('Quantity'),
  * );
  * @endcode
  *

@@ -1,8 +1,4 @@
 <?php
-/**
- * @file
- * Contains \Drupal\system\SystemManager.
- */
 
 namespace Drupal\system;
 
@@ -114,7 +110,7 @@ class SystemManager {
 
     // Check run-time requirements and status information.
     $requirements = $this->moduleHandler->invokeAll('requirements', array('runtime'));
-    usort($requirements, function($a, $b) {
+    uasort($requirements, function($a, $b) {
       if (!isset($a['weight'])) {
         if (!isset($b['weight'])) {
           return strcasecmp($a['title'], $b['title']);

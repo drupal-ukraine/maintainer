@@ -7,6 +7,8 @@ source:
   constants:
     entity_type: node
 process:
+  # If you are using this file to build a custom migration consider removing
+  # the cid field to allow incremental migrations.
   cid: cid
   pid:
     plugin: migration
@@ -31,5 +33,5 @@ destination:
   plugin: entity:comment
 migration_dependencies:
   required:
-    - d7_node:*
+    - d7_node
     - d7_comment_type

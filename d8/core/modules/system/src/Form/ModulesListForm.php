@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Form\ModulesListForm.
- */
-
 namespace Drupal\system\Form;
 
 use Drupal\Component\Utility\Unicode;
@@ -155,6 +150,7 @@ class ModulesListForm extends FormBase {
       if (empty($module->info['hidden'])) {
         $package = $module->info['package'];
         $form['modules'][$package][$filename] = $this->buildRow($modules, $module, $distribution);
+        $form['modules'][$package][$filename]['#parents'] = ['modules', $filename];
       }
     }
 
@@ -221,7 +217,7 @@ class ModulesListForm extends FormBase {
         '#type' => 'link',
         '#title' => $this->t('Help'),
         '#url' => Url::fromRoute('help.page', ['name' => $module->getName()]),
-        '#options' => array('attributes' => array('class' =>  array('module-link', 'module-link-help'), 'title' => $this->t('Help'))),
+        '#options' => array('attributes' => array('class' => array('module-link', 'module-link-help'), 'title' => $this->t('Help'))),
       );
     }
 
@@ -264,7 +260,7 @@ class ModulesListForm extends FormBase {
     if (!empty($module->info['required'])) {
       // Used when displaying modules that are required by the installation profile
       $row['enable']['#disabled'] = TRUE;
-      $row['#required_by'][] = $distribution . (!empty($module->info['explanation']) ? ' ('. $module->info['explanation'] .')' : '');
+      $row['#required_by'][] = $distribution . (!empty($module->info['explanation']) ? ' (' . $module->info['explanation'] . ')' : '');
     }
 
     // Check the compatibilities.
@@ -362,28 +358,29 @@ class ModulesListForm extends FormBase {
    *   An array of modules to install and their dependencies.
    */
   protected function buildModuleList(FormStateInterface $form_state) {
-    $packages = $form_state->getValue('modules');
-
     // Build a list of modules to install.
     $modules = array(
       'install' => array(),
       'dependencies' => array(),
+      'experimental' => [],
     );
 
-    // Required modules have to be installed.
-    // @todo This should really not be handled here.
     $data = system_rebuild_module_data();
     foreach ($data as $name => $module) {
-      if (!empty($module->required) && !$this->moduleHandler->moduleExists($name)) {
+      // If the module is installed there is nothing to do.
+      if ($this->moduleHandler->moduleExists($name)) {
+        continue;
+      }
+      // Required modules have to be installed.
+      if (!empty($module->required)) {
         $modules['install'][$name] = $module->info['name'];
       }
-    }
-
-    // First, build a list of all modules that were selected.
-    foreach ($packages as $items) {
-      foreach ($items as $name => $checkbox) {
-        if ($checkbox['enable'] && !$this->moduleHandler->moduleExists($name)) {
-          $modules['install'][$name] = $data[$name]->info['name'];
+      // Selected modules should be installed.
+      elseif (($checkbox = $form_state->getValue(['modules', $name], FALSE)) && $checkbox['enable']) {
+        $modules['install'][$name] = $data[$name]->info['name'];
+        // Identify experimental modules.
+        if ($data[$name]->info['package'] == 'Core (Experimental)') {
+          $modules['experimental'][$name] = $data[$name]->info['name'];
         }
       }
     }
@@ -394,6 +391,11 @@ class ModulesListForm extends FormBase {
         if (!isset($modules['install'][$dependency]) && !$this->moduleHandler->moduleExists($dependency)) {
           $modules['dependencies'][$module][$dependency] = $data[$dependency]->info['name'];
           $modules['install'][$dependency] = $data[$dependency]->info['name'];
+
+          // Identify experimental modules.
+          if ($data[$dependency]->info['package'] == 'Core (Experimental)') {
+            $modules['experimental'][$dependency] = $data[$dependency]->info['name'];
+          }
         }
       }
     }
@@ -406,6 +408,7 @@ class ModulesListForm extends FormBase {
     foreach (array_keys($modules['install']) as $module) {
       if (!drupal_check_module($module)) {
         unset($modules['install'][$module]);
+        unset($modules['experimental'][$module]);
         foreach (array_keys($data[$module]->required_by) as $dependent) {
           unset($modules['install'][$dependent]);
           unset($modules['dependencies'][$dependent]);
@@ -423,16 +426,16 @@ class ModulesListForm extends FormBase {
     // Retrieve a list of modules to install and their dependencies.
     $modules = $this->buildModuleList($form_state);
 
-    // Check if we have to install any dependencies. If there is one or more
-    // dependencies that are not installed yet, redirect to the confirmation
-    // form.
-    if (!empty($modules['dependencies']) || !empty($modules['missing'])) {
+    // Redirect to a confirmation form if needed.
+    if (!empty($modules['experimental']) || !empty($modules['dependencies'])) {
+
+      $route_name = !empty($modules['experimental']) ? 'system.modules_list_experimental_confirm' : 'system.modules_list_confirm';
       // Write the list of changed module states into a key value store.
       $account = $this->currentUser()->id();
       $this->keyValueExpirable->setWithExpire($account, $modules, 60);
 
       // Redirect to the confirmation form.
-      $form_state->setRedirect('system.modules_list_confirm');
+      $form_state->setRedirect($route_name);
 
       // We can exit here because at least one modules has dependencies
       // which we have to prompt the user for in a confirmation form.

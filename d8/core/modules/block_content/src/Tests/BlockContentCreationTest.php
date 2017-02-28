@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\block_content\Tests\BlockContentCreationTest.
- */
-
 namespace Drupal\block_content\Tests;
 
 use Drupal\block_content\Entity\BlockContent;
@@ -112,7 +107,7 @@ class BlockContentCreationTest extends BlockContentTestBase {
     )), 'Basic block created.');
 
     // Save our block permanently
-    $this->drupalPostForm(NULL, NULL, t('Save block'));
+    $this->drupalPostForm(NULL, ['region' => 'content'], t('Save block'));
 
     // Set test_view_mode as a custom display to be available on the list.
     $this->drupalGet('admin/structure/block/block-content');
@@ -139,6 +134,7 @@ class BlockContentCreationTest extends BlockContentTestBase {
     $this->assertFieldByXPath('//select[@name="settings[view_mode]"]', NULL, 'View mode setting shown because multiple exist');
 
     // Change the view mode.
+    $view_mode['region'] = 'content';
     $view_mode['settings[view_mode]'] = 'test_view_mode';
     $this->drupalPostForm(NULL, $view_mode, t('Save block'));
 

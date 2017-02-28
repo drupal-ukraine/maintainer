@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\EntityResolverManager.
- */
-
 namespace Drupal\Core\Entity;
 
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
@@ -171,13 +166,16 @@ class EntityResolverManager {
       list($entity_type) = explode('.', $entity_form, 2);
     }
 
-    if (isset($entity_type) && isset($this->getEntityTypes()[$entity_type])) {
+    // Do not add parameter information if the route does not declare a
+    // parameter in the first place. This is the case for add forms, for
+    // example.
+    if (isset($entity_type) && isset($this->getEntityTypes()[$entity_type]) && (strpos($route->getPath(), '{' . $entity_type . '}') !== FALSE)) {
       $parameter_definitions = $route->getOption('parameters') ?: array();
 
       // First try to figure out whether there is already a parameter upcasting
       // the same entity type already.
       foreach ($parameter_definitions as $info) {
-        if (isset($info['type'])) {
+        if (isset($info['type']) && (strpos($info['type'], 'entity:') === 0)) {
           // The parameter types are in the form 'entity:$entity_type'.
           list(, $parameter_entity_type) = explode(':', $info['type'], 2);
           if ($parameter_entity_type == $entity_type) {

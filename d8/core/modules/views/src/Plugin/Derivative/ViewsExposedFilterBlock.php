@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\Derivative\ViewsExposedFilterBlock.
- */
-
 namespace Drupal\views\Plugin\Derivative;
 
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
@@ -14,7 +9,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Provides block plugin definitions for all Views exposed filters.
  *
- * @see \Drupal\views\Plugin\block\block\ViewsExposedFilterBlock
+ * @see \Drupal\views\Plugin\Block\ViewsExposedFilterBlock
  */
 class ViewsExposedFilterBlock implements ContainerDeriverInterface {
 

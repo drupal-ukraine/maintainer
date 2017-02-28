@@ -1,13 +1,9 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Tests\Common\NoJavaScriptAnonymousTest.
- */
-
 namespace Drupal\system\Tests\Common;
 
 use Drupal\simpletest\WebTestBase;
+use Drupal\node\NodeInterface;
 
 /**
  * Tests that anonymous users are not served any JavaScript in the Standard
@@ -32,7 +28,7 @@ class NoJavaScriptAnonymousTest extends WebTestBase {
   public function testNoJavaScript() {
     // Create a node that is listed on the frontpage.
     $this->drupalCreateNode(array(
-      'promote' => NODE_PROMOTED,
+      'promote' => NodeInterface::PROMOTED,
     ));
     $user = $this->drupalCreateUser();
 

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\form_test\FormTestObject.
- */
-
 namespace Drupal\form_test;
 
 use Drupal\Core\Form\ConfigFormBase;
@@ -39,6 +34,11 @@ class FormTestObject extends ConfigFormBase {
       '#type' => 'textfield',
       '#title' => $this->t('Bananas'),
     );
+    $form['strawberry'] = [
+      '#type' => 'hidden',
+      '#value' => 'red',
+      '#attributes' => ['id' => 'redstrawberryhiddenfield'],
+    ];
 
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = array(

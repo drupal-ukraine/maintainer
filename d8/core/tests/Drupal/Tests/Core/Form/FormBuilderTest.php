@@ -570,6 +570,29 @@ class FormBuilderTest extends FormTestBase {
 
   /**
    * @covers ::buildForm
+   */
+  public function testGetPostAjaxRequest() {
+    $request = new Request([FormBuilderInterface::AJAX_FORM_REQUEST => TRUE], ['form_id' => 'different_form_id']);
+    $request->setMethod('POST');
+    $this->requestStack->push($request);
+
+    $form_state = (new FormState())
+      ->setUserInput([FormBuilderInterface::AJAX_FORM_REQUEST => TRUE])
+      ->setMethod('get')
+      ->setAlwaysProcess()
+      ->disableRedirect()
+      ->set('ajax', TRUE);
+
+    $form_id = '\Drupal\Tests\Core\Form\TestForm';
+    $expected_form = (new TestForm())->buildForm([], $form_state);
+
+    $form = $this->formBuilder->buildForm($form_id, $form_state);
+    $this->assertFormElement($expected_form, $form, 'test');
+    $this->assertSame('test-form', $form['#id']);
+  }
+
+  /**
+   * @covers ::buildForm
    *
    * @dataProvider providerTestChildAccessInheritance
    */
@@ -738,7 +761,7 @@ class FormBuilderTest extends FormTestBase {
    */
   public function testValueCallableIsSafe($callback, $expected) {
     $method = new \ReflectionMethod(FormBuilder::class, 'valueCallableIsSafe');
-    $method->setAccessible(true);
+    $method->setAccessible(TRUE);
     $is_safe = $method->invoke($this->formBuilder, $callback);
     $this->assertSame($expected, $is_safe);
   }
@@ -886,11 +909,13 @@ class TestForm implements FormInterface {
   }
   public function validateForm(array &$form, FormStateInterface $form_state) { }
   public function submitForm(array &$form, FormStateInterface $form_state) { }
+
 }
 class TestFormInjected extends TestForm implements ContainerInjectionInterface {
   public static function create(ContainerInterface $container) {
     return new static();
   }
+
 }
 
 

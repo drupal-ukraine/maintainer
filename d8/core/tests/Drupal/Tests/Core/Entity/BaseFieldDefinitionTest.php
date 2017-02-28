@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\Core\Entity\BaseFieldDefinitionTest.
- */
-
 namespace Drupal\Tests\Core\Entity;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
@@ -257,6 +252,21 @@ class BaseFieldDefinitionTest extends UnitTestCase {
     $this->assertTrue($definition->isRequired());
     $definition->setRequired(FALSE);
     $this->assertFalse($definition->isRequired());
+  }
+
+  /**
+   * Tests storage required.
+   *
+   * @covers ::isStorageRequired
+   * @covers ::setStorageRequired
+   */
+  public function testFieldStorageRequired() {
+    $definition = BaseFieldDefinition::create($this->fieldType);
+    $this->assertFalse($definition->isStorageRequired());
+    $definition->setStorageRequired(TRUE);
+    $this->assertTrue($definition->isStorageRequired());
+    $definition->setStorageRequired(FALSE);
+    $this->assertFalse($definition->isStorageRequired());
   }
 
   /**

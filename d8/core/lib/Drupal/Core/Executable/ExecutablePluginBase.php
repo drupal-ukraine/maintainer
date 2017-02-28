@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Executable\ExecutablePluginBase.
- */
-
 namespace Drupal\Core\Executable;
 
 use Drupal\Core\Plugin\ContextAwarePluginBase;
@@ -74,7 +69,7 @@ abstract class ExecutablePluginBase extends ContextAwarePluginBase implements Ex
    *   https://www.drupal.org/node/1764380.
    * @todo This does not set a value in \Drupal::config(), so the name is confusing.
    *
-   * @return \Drupal\Core\Executable\ExecutablePluginBase.
+   * @return \Drupal\Core\Executable\ExecutablePluginBase
    *   The executable object for chaining.
    */
   public function setConfig($key, $value) {
@@ -88,5 +83,5 @@ abstract class ExecutablePluginBase extends ContextAwarePluginBase implements Ex
     $this->configuration[$key] = $value;
     return $this;
   }
-}
 
+}

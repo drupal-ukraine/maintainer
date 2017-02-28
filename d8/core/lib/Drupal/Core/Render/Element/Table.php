@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\Table.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -29,28 +24,35 @@ use Drupal\Component\Utility\Html as HtmlUtility;
  *   providing responsive tables.  Defaults to TRUE.
  * - #sticky: Indicates whether to add the drupal.tableheader library that makes
  *   table headers always visible at the top of the page. Defaults to FALSE.
+ * - #size: The size of the input element in characters.
  *
  * Usage example:
  * @code
  * $form['contacts'] = array(
  *   '#type' => 'table',
- *   '#title' => 'Sample Table',
- *   '#header' => array('Name', 'Phone'),
+ *   '#caption' => $this->t('Sample Table'),
+ *   '#header' => array($this->t('Name'), $this->t('Phone')),
  * );
  *
- * for ($i=1; $i<=4; $i++) {
+ * for ($i = 1; $i <= 4; $i++) {
+ *   $form['contacts'][$i]['#attributes'] = array('class' => array('foo', 'baz'));
  *   $form['contacts'][$i]['name'] = array(
  *     '#type' => 'textfield',
- *     '#title' => t('Name'),
+ *     '#title' => $this->t('Name'),
  *     '#title_display' => 'invisible',
  *   );
  *
  *   $form['contacts'][$i]['phone'] = array(
  *     '#type' => 'tel',
- *     '#title' => t('Phone'),
+ *     '#title' => $this->t('Phone'),
  *     '#title_display' => 'invisible',
  *   );
  * }
+ *
+ * $form['contacts'][]['colspan_example'] = array(
+ *   '#plain_text' => 'Colspan Example',
+ *   '#wrapper_attributes' => array('colspan' => 2, 'class' => array('foo', 'bar')),
+ * );
  * @endcode
  * @see \Drupal\Core\Render\Element\Tableselect
  *
@@ -284,7 +286,7 @@ class Table extends FormElement {
    * @code
    * $form['table'] = array(
    *   '#type' => 'table',
-   *   '#header' => array(t('Title'), array('data' => t('Operations'), 'colspan' => '1')),
+   *   '#header' => array($this->t('Title'), array('data' => $this->t('Operations'), 'colspan' => '1')),
    *   // Optionally, to add tableDrag support:
    *   '#tabledrag' => array(
    *     array(
@@ -306,7 +308,7 @@ class Table extends FormElement {
    *   $form['table'][$row]['#attributes']['class'][] = 'draggable';
    *   $form['table'][$row]['weight'] = array(
    *     '#type' => 'textfield',
-   *     '#title' => t('Weight for @title', array('@title' => $thing['title'])),
+   *     '#title' => $this->t('Weight for @title', array('@title' => $thing['title'])),
    *     '#title_display' => 'invisible',
    *     '#size' => 4,
    *     '#default_value' => $thing['weight'],
@@ -317,7 +319,7 @@ class Table extends FormElement {
    *   // attribute in #header above.
    *   $form['table'][$row]['edit'] = array(
    *     '#type' => 'link',
-   *     '#title' => t('Edit'),
+   *     '#title' => $this->t('Edit'),
    *     '#url' => Url::fromRoute('entity.test_entity.edit_form', ['test_entity' => $row]),
    *   );
    * }

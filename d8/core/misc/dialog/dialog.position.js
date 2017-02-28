@@ -27,6 +27,7 @@
    * @function Drupal.dialog~resetSize
    *
    * @param {jQuery.Event} event
+   *   The event triggered.
    *
    * @fires event:dialogContentResize
    */
@@ -55,7 +56,9 @@
       }
     }
     // Offset the dialog center to be at the center of Drupal.displace.offsets.
-    adjustedOptions = resetPosition(adjustedOptions);
+    if (!event.data.settings.modal) {
+      adjustedOptions = resetPosition(adjustedOptions);
+    }
     event.data.$element
       .dialog('option', adjustedOptions)
       .trigger('dialogContentResize');
@@ -67,8 +70,10 @@
    * @function Drupal.dialog~resetPosition
    *
    * @param {object} options
+   *   Options object.
    *
    * @return {object}
+   *   Altered options object.
    */
   function resetPosition(options) {
     var offsets = displace.offsets;
@@ -95,11 +100,12 @@
         $(window)
           .on('resize.dialogResize scroll.dialogResize', eventData, autoResize)
           .trigger('resize.dialogResize');
-        $(document).on('drupalViewportOffsetChange', eventData, autoResize);
+        $(document).on('drupalViewportOffsetChange.dialogResize', eventData, autoResize);
       }
     },
     'dialog:beforeclose': function (event, dialog, $element) {
       $(window).off('.dialogResize');
+      $(document).off('.dialogResize');
     }
   });
 

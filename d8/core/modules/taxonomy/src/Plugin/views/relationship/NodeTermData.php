@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\taxonomy\Plugin\views\relationship\NodeTermData.
- */
-
 namespace Drupal\taxonomy\Plugin\views\relationship;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -21,7 +16,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @ViewsRelationship("node_term_data")
  */
-class NodeTermData extends RelationshipPluginBase  {
+class NodeTermData extends RelationshipPluginBase {
 
   /**
    * The vocabulary storage.
@@ -137,7 +132,7 @@ class NodeTermData extends RelationshipPluginBase  {
       $query = db_select('taxonomy_term_field_data', 'td');
       $query->addJoin($def['type'], 'taxonomy_index', 'tn', 'tn.tid = td.tid');
       $query->condition('td.vid', array_filter($this->options['vids']), 'IN');
-      $query->addTag('term_access');
+      $query->addTag('taxonomy_term_access');
       $query->fields('td');
       $query->fields('tn', array('nid'));
       $def['table formula'] = $query;

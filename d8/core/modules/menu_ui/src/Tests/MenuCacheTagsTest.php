@@ -1,14 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\menu_ui\Tests\MenuCacheTagsTest.
- */
-
 namespace Drupal\menu_ui\Tests;
 
 use Drupal\Core\Url;
+use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Tests\Cache\PageCacheTagsTestBase;
+use Drupal\system\Entity\Menu;
 
 /**
  * Tests the Menu and Menu Link entities' cache tags.
@@ -32,7 +29,7 @@ class MenuCacheTagsTest extends PageCacheTagsTestBase {
     $url = Url::fromRoute('test_page_test.test_page');
 
     // Create a Llama menu, add a link to it and place the corresponding block.
-    $menu = entity_create('menu', array(
+    $menu = Menu::create(array(
       'id' => 'llama',
       'label' => 'Llama',
       'description' => 'Description text',
@@ -49,6 +46,7 @@ class MenuCacheTagsTest extends PageCacheTagsTestBase {
 
     // Verify a cache hit, but also the presence of the correct cache tags.
     $expected_tags = array(
+      'http_response',
       'rendered',
       'block_view',
       'config:block_list',
@@ -79,7 +77,7 @@ class MenuCacheTagsTest extends PageCacheTagsTestBase {
 
     // Verify that after adding a menu link, there is a cache miss.
     $this->pass('Test addition of menu link.', 'Debug');
-    $menu_link_2 = entity_create('menu_link_content', array(
+    $menu_link_2 = MenuLinkContent::create(array(
       'id' => '',
       'parent' => '',
       'title' => 'Alpaca',
@@ -110,7 +108,7 @@ class MenuCacheTagsTest extends PageCacheTagsTestBase {
     $this->verifyPageCache($url, 'MISS');
 
     // Verify a cache hit.
-    $this->verifyPageCache($url, 'HIT', ['config:block_list', 'config:user.role.anonymous', 'rendered']);
+    $this->verifyPageCache($url, 'HIT', ['config:block_list', 'config:user.role.anonymous', 'http_response', 'rendered']);
   }
 
 }

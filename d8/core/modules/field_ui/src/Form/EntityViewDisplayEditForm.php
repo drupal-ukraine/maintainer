@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\field_ui\Form\EntityViewDisplayEditForm.
- */
-
 namespace Drupal\field_ui\Form;
 
 use Drupal\Core\Field\FieldDefinitionInterface;
@@ -116,11 +111,23 @@ class EntityViewDisplayEditForm extends EntityDisplayFormBase {
   /**
    * {@inheritdoc}
    */
+  protected function getDisplayModesLink() {;
+    return [
+      '#type' => 'link',
+      '#title' => t('Manage view modes'),
+      '#url' => Url::fromRoute('entity.entity_view_mode.collection'),
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   protected function getTableHeader() {
     return array(
       $this->t('Field'),
       $this->t('Weight'),
       $this->t('Parent'),
+      $this->t('Region'),
       $this->t('Label'),
       array('data' => $this->t('Format'), 'colspan' => 3),
     );

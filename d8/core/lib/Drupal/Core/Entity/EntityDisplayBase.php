@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\EntityDisplayBase.
- */
-
 namespace Drupal\Core\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
@@ -99,7 +94,7 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
   protected $plugins = array();
 
   /**
-   * Context in which this entity will be used (e.g. 'display', 'form').
+   * Context in which this entity will be used (e.g. 'view', 'form').
    *
    * @var string
    */
@@ -127,7 +122,7 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
       throw new \InvalidArgumentException('Missing required properties for an EntityDisplay entity.');
     }
 
-    if (!$this->entityManager()->getDefinition($values['targetEntityType'])->isSubclassOf('\Drupal\Core\Entity\FieldableEntityInterface')) {
+    if (!$this->entityTypeManager()->getDefinition($values['targetEntityType'])->entityClassImplements(FieldableEntityInterface::class)) {
       throw new \InvalidArgumentException('EntityDisplay entities can only handle fieldable entity types.');
     }
 
@@ -159,6 +154,7 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
   protected function init() {
     // Only populate defaults for "official" view modes and form modes.
     if ($this->mode !== static::CUSTOM_MODE) {
+      $default_region = $this->getDefaultRegion();
       // Fill in defaults for extra fields.
       $context = $this->displayContext == 'view' ? 'display' : $this->displayContext;
       $extra_fields = \Drupal::entityManager()->getExtraFields($this->targetEntityType, $this->bundle);
@@ -175,6 +171,10 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
             $this->hidden[$name] = TRUE;
           }
         }
+        // Ensure extra fields have a 'region'.
+        if (isset($this->content[$name])) {
+          $this->content[$name] += ['region' => $default_region];
+        }
       }
 
       // Fill in defaults for fields.
@@ -183,10 +183,17 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
         if (!$definition->isDisplayConfigurable($this->displayContext) || (!isset($this->content[$name]) && !isset($this->hidden[$name]))) {
           $options = $definition->getDisplayOptions($this->displayContext);
 
-          if (!empty($options['type']) && $options['type'] == 'hidden') {
+          // @todo Remove handling of 'type' in https://www.drupal.org/node/2799641.
+          if (!isset($options['region']) && !empty($options['type']) && $options['type'] === 'hidden') {
+            $options['region'] = 'hidden';
+            @trigger_error("Specifying 'type' => 'hidden' is deprecated, use 'region' => 'hidden' instead.", E_USER_DEPRECATED);
+          }
+
+          if (!empty($options['region']) && $options['region'] === 'hidden') {
             $this->hidden[$name] = TRUE;
           }
           elseif ($options) {
+            $options += ['region' => $default_region];
             $this->content[$name] = $this->pluginManager->prepareConfiguration($definition->getType(), $options);
           }
           // Note: (base) fields that do not specify display options are not
@@ -244,9 +251,37 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
    * {@inheritdoc}
    */
   public function preSave(EntityStorageInterface $storage, $update = TRUE) {
+    // Ensure that a region is set on each component.
+    foreach ($this->getComponents() as $name => $component) {
+      $this->handleHiddenType($name, $component);
+      // Ensure that a region is set.
+      if (isset($this->content[$name]) && !isset($component['region'])) {
+        // Directly set the component to bypass other changes in setComponent().
+        $this->content[$name]['region'] = $this->getDefaultRegion();
+      }
+    }
+
     ksort($this->content);
     ksort($this->hidden);
     parent::preSave($storage, $update);
+  }
+
+  /**
+   * Handles a component type of 'hidden'.
+   *
+   * @deprecated This method exists only for backwards compatibility.
+   *
+   * @todo Remove this in https://www.drupal.org/node/2799641.
+   *
+   * @param string $name
+   *   The name of the component.
+   * @param array $component
+   *   The component array.
+   */
+  protected function handleHiddenType($name, array $component) {
+    if (!isset($component['region']) && isset($component['type']) && $component['type'] === 'hidden') {
+      $this->removeComponent($name);
+    }
   }
 
   /**
@@ -507,6 +542,16 @@ abstract class EntityDisplayBase extends ConfigEntityBase implements EntityDispl
       }
     }
     return $intersect;
+  }
+
+  /**
+   * Gets the default region.
+   *
+   * @return string
+   *   The default region for this display.
+   */
+  protected function getDefaultRegion() {
+    return 'content';
   }
 
   /**

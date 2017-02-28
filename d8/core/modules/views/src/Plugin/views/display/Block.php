@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\display\Block.
- */
-
 namespace Drupal\views\Plugin\views\display;
 
 use Drupal\Core\Entity\EntityManagerInterface;
@@ -28,7 +23,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   admin = @Translation("Block")
  * )
  *
- * @see \Drupal\views\Plugin\block\block\ViewsBlock
+ * @see \Drupal\views\Plugin\Block\ViewsBlock
  * @see \Drupal\views\Plugin\Derivative\ViewsBlock
  */
 class Block extends DisplayPluginBase {
@@ -265,7 +260,7 @@ class Block extends DisplayPluginBase {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
    *
-   * @return array $form
+   * @return array
    *   The renderable form array representing the entire configuration form.
    *
    * @see \Drupal\views\Plugin\Block\ViewsBlock::blockForm()
@@ -325,7 +320,7 @@ class Block extends DisplayPluginBase {
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
    *
-   * * @see \Drupal\views\Plugin\Block\ViewsBlock::blockSubmit()
+   * @see \Drupal\views\Plugin\Block\ViewsBlock::blockSubmit()
    */
   public function blockSubmit(ViewsBlock $block, $form, FormStateInterface $form_state) {
     if ($items_per_page = $form_state->getValue(array('override', 'items_per_page'))) {
@@ -351,11 +346,11 @@ class Block extends DisplayPluginBase {
    * Block views use exposed widgets only if AJAX is set.
    */
   public function usesExposed() {
-      if ($this->ajaxEnabled()) {
-        return parent::usesExposed();
-      }
-      return FALSE;
+    if ($this->ajaxEnabled()) {
+      return parent::usesExposed();
     }
+    return FALSE;
+  }
 
   /**
    * {@inheritdoc}

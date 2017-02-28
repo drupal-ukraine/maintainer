@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\EntityTypeInterface.
- */
-
 namespace Drupal\Core\Entity;
 
 use Drupal\Component\Plugin\Definition\PluginDefinitionInterface;
@@ -51,22 +46,6 @@ interface EntityTypeInterface extends PluginDefinitionInterface {
    * @return $this
    */
   public function set($property, $value);
-
-  /**
-   * Gets the unique identifier of the entity type.
-   *
-   * @return string
-   *   The unique identifier of the entity type.
-   */
-  public function id();
-
-  /**
-   * Gets the name of the provider of this entity type.
-   *
-   * @return string
-   *   The name of the provider of this entity type.
-   */
-  public function getProvider();
 
   /**
    * Gets the name of the original entity type class.
@@ -357,6 +336,17 @@ interface EntityTypeInterface extends PluginDefinitionInterface {
   public function setAccessClass($class);
 
   /**
+   * Indicates if the entity type class implements the given interface.
+   *
+   * @param string $interface
+   *   The class or interface to check.
+   *
+   * @return bool
+   *   TRUE if the entity type class implements the given interface.
+   */
+  public function entityClassImplements($interface);
+
+  /**
    * Indicates if the entity type is a subclass of the given class or interface.
    *
    * @param string $class
@@ -364,6 +354,10 @@ interface EntityTypeInterface extends PluginDefinitionInterface {
    *
    * @return bool
    *   TRUE if the entity type is a subclass of the class or interface.
+   *
+   * @deprecated in Drupal 8.3.0 and will be removed before Drupal 9.0.0.
+   *   Use Drupal\Core\Entity\EntityTypeInterface::entityClassImplements()
+   *   instead.
    */
   public function isSubclassOf($class);
 
@@ -531,7 +525,9 @@ interface EntityTypeInterface extends PluginDefinitionInterface {
   /**
    * Gets the name of the entity type which provides bundles.
    *
-   * @return string
+   * @return string|null
+   *   The name of the entity type which provides bundles, or NULL if the entity
+   *   type does not have a bundle entity type.
    */
   public function getBundleEntityType();
 
@@ -575,6 +571,14 @@ interface EntityTypeInterface extends PluginDefinitionInterface {
    * @return bool
    */
   public function isTranslatable();
+
+  /**
+   * Indicates whether the revision form fields should be added to the form.
+   *
+   * @return bool
+   *   TRUE if the form field should be added, FALSE otherwise.
+   */
+  public function showRevisionUi();
 
   /**
    * Indicates whether entities of this type have revision support.
@@ -629,6 +633,41 @@ interface EntityTypeInterface extends PluginDefinitionInterface {
    *   The lowercase form of the human-readable entity type name.
    */
   public function getLowercaseLabel();
+
+  /**
+   * Gets the collection label of the entity type.
+   *
+   * @return string
+   *   The collection label.
+   */
+  public function getCollectionLabel();
+
+  /**
+   * Gets the singular label of the entity type.
+   *
+   * @return string
+   *   The singular label.
+   */
+  public function getSingularLabel();
+
+  /**
+   * Gets the plural label of the entity type.
+   *
+   * @return string
+   *   The plural label.
+   */
+  public function getPluralLabel();
+
+  /**
+   * Gets the count label of the entity type
+   *
+   * @param int $count
+   *   The item count to display if the plural form was requested.
+   *
+   * @return string
+   *   The count label.
+   */
+  public function getCountLabel($count);
 
   /**
    * Gets a callable that can be used to provide the entity URI.

@@ -40,7 +40,7 @@ display:
       exposed_form:
         type: basic
         options:
-          submit_button: Apply
+          submit_button: Filter
           reset_button: false
           reset_button_label: Reset
           exposed_sorts_label: 'Sort by'
@@ -106,7 +106,7 @@ display:
           id: status
           table: node_field_data
           field: status
-          value: true
+          value: '1'
           group: 0
           expose:
             operator: '0'

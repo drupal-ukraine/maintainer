@@ -1,14 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\rest\Plugin\views\display\RestExport.
- */
-
 namespace Drupal\rest\Plugin\views\display;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheableResponse;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\RenderContext;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Routing\RouteProviderInterface;
@@ -18,6 +14,7 @@ use Drupal\views\Render\ViewsRenderPipelineMarkup;
 use Drupal\views\ViewExecutable;
 use Drupal\views\Plugin\views\display\PathPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
 
 /**
@@ -83,6 +80,20 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
   protected $renderer;
 
   /**
+   * The collector of authentication providers.
+   *
+   * @var \Drupal\Core\Authentication\AuthenticationCollectorInterface
+   */
+  protected $authenticationCollector;
+
+  /**
+   * The authentication providers, keyed by ID.
+   *
+   * @var string[]
+   */
+  protected $authenticationProviders;
+
+  /**
    * Constructs a RestExport object.
    *
    * @param array $configuration
@@ -97,11 +108,14 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
    *   The state key value store.
    * @param \Drupal\Core\Render\RendererInterface $renderer
    *   The renderer.
+   * @param string[] $authentication_providers
+   *   The authentication providers, keyed by ID.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, RouteProviderInterface $route_provider, StateInterface $state, RendererInterface $renderer) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, RouteProviderInterface $route_provider, StateInterface $state, RendererInterface $renderer, array $authentication_providers) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $route_provider, $state);
 
     $this->renderer = $renderer;
+    $this->authenticationProviders = $authentication_providers;
   }
 
   /**
@@ -114,7 +128,9 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
       $plugin_definition,
       $container->get('router.route_provider'),
       $container->get('state'),
-      $container->get('renderer')
+      $container->get('renderer'),
+      $container->getParameter('authentication_providers')
+
     );
   }
   /**
@@ -205,10 +221,23 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
   }
 
   /**
+   * Gets the auth options available.
+   *
+   * @return string[]
+   *   An array to use as value for "#options" in the form element.
+   */
+  public function getAuthOptions() {
+    return array_combine($this->authenticationProviders, $this->authenticationProviders);
+  }
+
+  /**
    * {@inheritdoc}
    */
   protected function defineOptions() {
     $options = parent::defineOptions();
+
+    // Options for REST authentication.
+    $options['auth'] = ['default' => []];
 
     // Set the default style plugin to 'json'.
     $options['style']['contains']['type']['default'] = 'serializer';
@@ -230,6 +259,9 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
   public function optionsSummary(&$categories, &$options) {
     parent::optionsSummary($categories, $options);
 
+    // Authentication.
+    $auth = $this->getOption('auth') ? implode(', ', $this->getOption('auth')) : $this->t('No authentication is set');
+
     unset($categories['page'], $categories['exposed']);
     // Hide some settings, as they aren't useful for pure data output.
     unset($options['show_admin_links'], $options['analyze-theme']);
@@ -244,12 +276,45 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
 
     $options['path']['category'] = 'path';
     $options['path']['title'] = $this->t('Path');
+    $options['auth'] = array(
+      'category' => 'path',
+      'title' => $this->t('Authentication'),
+      'value' => views_ui_truncate($auth, 24),
+    );
 
     // Remove css/exposed form settings, as they are not used for the data
     // display.
     unset($options['exposed_form']);
     unset($options['exposed_block']);
     unset($options['css_class']);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildOptionsForm(&$form, FormStateInterface $form_state) {
+    parent::buildOptionsForm($form, $form_state);
+    if ($form_state->get('section') === 'auth') {
+      $form['#title'] .= $this->t('The supported authentication methods for this view');
+      $form['auth'] = array(
+        '#type' => 'checkboxes',
+        '#title' => $this->t('Authentication methods'),
+        '#description' => $this->t('These are the supported authentication providers for this view. When this view is requested, the client will be forced to authenticate with one of the selected providers. Make sure you set the appropriate requirements at the <em>Access</em> section since the Authentication System will fallback to the anonymous user if it fails to authenticate. For example: require Access: Role | Authenticated User.'),
+        '#options' => $this->getAuthOptions(),
+        '#default_value' => $this->getOption('auth'),
+      );
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitOptionsForm(&$form, FormStateInterface $form_state) {
+    parent::submitOptionsForm($form, $form_state);
+
+    if ($form_state->get('section') == 'auth') {
+      $this->setOption('auth', array_keys(array_filter($form_state->getValue('auth'))));
+    }
   }
 
   /**
@@ -273,7 +338,34 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
         // anyway.
         $route->setRequirement('_format', implode('|', $formats + ['html']));
       }
+      // Add authentication to the route if it was set. If no authentication was
+      // set, the default authentication will be used, which is cookie based by
+      // default.
+      $auth = $this->getOption('auth');
+      if (!empty($auth)) {
+        $route->setOption('_auth', $auth);
+      }
     }
+  }
+
+  /**
+   * Determines whether the view overrides the given route.
+   *
+   * @param string $view_path
+   *   The path of the view.
+   * @param \Symfony\Component\Routing\Route $view_route
+   *   The route of the view.
+   * @param \Symfony\Component\Routing\Route $route
+   *   The route itself.
+   *
+   * @return bool
+   *   TRUE, when the view should override the given route.
+   */
+  protected function overrideApplies($view_path, Route $view_route, Route $route) {
+    $route_formats = explode('|', $route->getRequirement('_format'));
+    $view_route_formats = explode('|', $view_route->getRequirement('_format'));
+    return $this->overrideAppliesPathAndMethod($view_path, $view_route, $route)
+      && (!$route->hasRequirement('_format') || array_intersect($route_formats, $view_route_formats) != []);
   }
 
   /**
@@ -282,12 +374,17 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
   public static function buildResponse($view_id, $display_id, array $args = []) {
     $build = static::buildBasicRenderable($view_id, $display_id, $args);
 
+    // Setup an empty response so headers can be added as needed during views
+    // rendering and processing.
+    $response = new CacheableResponse('', 200);
+    $build['#response'] = $response;
+
     /** @var \Drupal\Core\Render\RendererInterface $renderer */
     $renderer = \Drupal::service('renderer');
 
-    $output = $renderer->renderRoot($build);
+    $output = (string) $renderer->renderRoot($build);
 
-    $response = new CacheableResponse($output, 200);
+    $response->setContent($output);
     $cache_metadata = CacheableMetadata::createFromRenderArray($build);
     $response->addCacheableDependency($cache_metadata);
 
@@ -351,6 +448,21 @@ class RestExport extends PathPluginBase implements ResponseDisplayPluginInterfac
    */
   public function preview() {
     return $this->view->render();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function calculateDependencies() {
+    $dependencies = parent::calculateDependencies();
+
+    $dependencies += ['module' => []];
+    $modules = array_map(function ($authentication_provider) {
+      return $this->authenticationProviders[$authentication_provider];
+    }, $this->getOption('auth'));
+    $dependencies['module'] = array_merge($dependencies['module'], $modules);
+
+    return $dependencies;
   }
 
 }

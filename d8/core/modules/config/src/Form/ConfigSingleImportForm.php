@@ -1,17 +1,13 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\config\Form\ConfigSingleImportForm.
- */
-
 namespace Drupal\config\Form;
 
-use Drupal\Component\Serialization\Yaml;
+use Drupal\Component\Serialization\Exception\InvalidDataTypeException;
 use Drupal\config\StorageReplaceDataWrapper;
 use Drupal\Core\Config\ConfigImporter;
 use Drupal\Core\Config\ConfigImporterException;
 use Drupal\Core\Config\ConfigManagerInterface;
+use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Config\StorageComparer;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
@@ -23,6 +19,7 @@ use Drupal\Core\Form\ConfirmFormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\Core\Serialization\Yaml;
 use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -225,7 +222,7 @@ class ConfigSingleImportForm extends ConfirmFormBase {
 
     $entity_types = array();
     foreach ($this->entityManager->getDefinitions() as $entity_type => $definition) {
-      if ($definition->isSubclassOf('Drupal\Core\Config\Entity\ConfigEntityInterface')) {
+      if ($definition->entityClassImplements(ConfigEntityInterface::class)) {
         $entity_types[$entity_type] = $definition->getLabel();
       }
     }
@@ -286,8 +283,13 @@ class ConfigSingleImportForm extends ConfirmFormBase {
       return;
     }
 
-    // Decode the submitted import.
-    $data = Yaml::decode($form_state->getValue('import'));
+    try {
+      // Decode the submitted import.
+      $data = Yaml::decode($form_state->getValue('import'));
+    }
+    catch (InvalidDataTypeException $e) {
+      $form_state->setErrorByName('import', $this->t('The import failed with the following message: %message', ['%message' => $e->getMessage()]));
+    }
 
     // Validate for config entities.
     if ($form_state->getValue('config_type') !== 'system.simple') {
@@ -393,7 +395,7 @@ class ConfigSingleImportForm extends ConfirmFormBase {
     if ($config_importer->alreadyImporting()) {
       drupal_set_message($this->t('Another request may be importing configuration already.'), 'error');
     }
-    else{
+    else {
       try {
         $sync_steps = $config_importer->initialize();
         $batch = [

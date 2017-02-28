@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\datetime\Plugin\Field\FieldType\DateTimeFieldItemList.
- */
-
 namespace Drupal\datetime\Plugin\Field\FieldType;
 
 use Drupal\Core\Datetime\DrupalDateTime;
@@ -51,7 +46,7 @@ class DateTimeFieldItemList extends FieldItemList {
         'default_date' => array(
           '#type' => 'textfield',
           '#title' => t('Relative default value'),
-          '#description' => t("Describe a time by reference to the current day, like '+90 days' (90 days from the day the field is created) or '+1 Saturday' (the next Saturday). See <a href=\"@url\">@strtotime</a> for more details.", array('@strtotime' => 'strtotime', '@url' => 'http://www.php.net/manual/en/function.strtotime.php')),
+          '#description' => t("Describe a time by reference to the current day, like '+90 days' (90 days from the day the field is created) or '+1 Saturday' (the next Saturday). See <a href=\"http://php.net/manual/function.strtotime.php\">strtotime</a> for more details."),
           '#default_value' => (isset($default_value[0]['default_date_type']) && $default_value[0]['default_date_type'] == static::DEFAULT_VALUE_CUSTOM) ? $default_value[0]['default_date'] : '',
           '#states' => array(
             'visible' => array(
@@ -97,15 +92,23 @@ class DateTimeFieldItemList extends FieldItemList {
     $default_value = parent::processDefaultValue($default_value, $entity, $definition);
 
     if (isset($default_value[0]['default_date_type'])) {
-      // A default value should be in the format and timezone used for date
-      // storage.
-      $date = new DrupalDateTime($default_value[0]['default_date'], DATETIME_STORAGE_TIMEZONE);
-      $storage_format = $definition->getSetting('datetime_type') == DateTimeItem::DATETIME_TYPE_DATE ? DATETIME_DATE_STORAGE_FORMAT: DATETIME_DATETIME_STORAGE_FORMAT;
-      $value = $date->format($storage_format);
+      if ($definition->getSetting('datetime_type') === DateTimeItem::DATETIME_TYPE_DATE) {
+        // A default date only value should be in the format used for date
+        // storage but in the user's local timezone.
+        $date = new DrupalDateTime($default_value[0]['default_date'], drupal_get_user_timezone());
+        $format = DATETIME_DATE_STORAGE_FORMAT;
+      }
+      else {
+        // A default date+time value should be in the format and timezone used
+        // for date storage.
+        $date = new DrupalDateTime($default_value[0]['default_date'], DATETIME_STORAGE_TIMEZONE);
+        $format = DATETIME_DATETIME_STORAGE_FORMAT;
+      }
+      $value = $date->format($format);
       // We only provide a default value for the first item, as do all fields.
       // Otherwise, there is no way to clear out unwanted values on multiple value
       // fields.
-      $default_value =  array(
+      $default_value = array(
         array(
           'value' => $value,
           'date' => $date,

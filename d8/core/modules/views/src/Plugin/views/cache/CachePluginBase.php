@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\cache\CachePluginBase.
- */
-
 namespace Drupal\views\Plugin\views\cache;
 
 use Drupal\Core\Cache\Cache;
@@ -36,7 +31,7 @@ abstract class CachePluginBase extends PluginBase {
   /**
    * Contains all data that should be written/read from cache.
    */
-  var $storage = array();
+  public $storage = array();
 
   /**
    * Which cache bin to store query results in.
@@ -268,7 +263,7 @@ abstract class CachePluginBase extends PluginBase {
    * @param \Drupal\views\ResultRow[] $result
    *   The result containing loaded entities.
    *
-   * @return \Drupal\views\ResultRow[] $result
+   * @return \Drupal\views\ResultRow[]
    *   The result without loaded entities.
    */
   protected function prepareViewResult(array $result) {

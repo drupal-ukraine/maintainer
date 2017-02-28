@@ -1,8 +1,4 @@
 <?php
-/**
- * @file
- * Contains \Drupal\Core\Render\HtmlResponseAttachmentsProcessor.
- */
 
 namespace Drupal\Core\Render;
 
@@ -423,9 +419,13 @@ class HtmlResponseAttachmentsProcessor implements AttachmentsResponseProcessorIn
 
       if ($should_add_header) {
         // Also add a HTTP header "Link:".
-        $href = '<' . Html::escape($attributes['href'] . '>');
+        $href = '<' . Html::escape($attributes['href']) . '>';
         unset($attributes['href']);
-        $attached['http_header'][] = ['Link', $href . drupal_http_header_attributes($attributes), TRUE];
+        if ($param = drupal_http_header_attributes($attributes)) {
+          $href .= ';' . $param;
+        }
+
+        $attached['http_header'][] = ['Link', $href, FALSE];
       }
     }
     return $attached;
@@ -446,7 +446,7 @@ class HtmlResponseAttachmentsProcessor implements AttachmentsResponseProcessorIn
    */
   protected function processFeed($attached_feed) {
     $html_head_link = [];
-    foreach($attached_feed as $item) {
+    foreach ($attached_feed as $item) {
       $feed_link = [
         'href' => $item[0],
         'rel' => 'alternate',

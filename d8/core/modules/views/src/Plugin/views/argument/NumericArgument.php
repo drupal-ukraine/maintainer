@@ -1,13 +1,9 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\argument\NumericArgument.
- */
-
 namespace Drupal\views\Plugin\views\argument;
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Plugin\Context\ContextDefinition;
 
 /**
  * Basic argument handler for arguments that are numeric. Incorporates
@@ -23,13 +19,13 @@ class NumericArgument extends ArgumentPluginBase {
    * The operator used for the query: or|and.
    * @var string
    */
-  var $operator;
+  public $operator;
 
   /**
    * The actual value which is used for querying.
    * @var array
    */
-  var $value;
+  public $value;
 
   protected function defineOptions() {
     $options = parent::defineOptions();
@@ -67,7 +63,7 @@ class NumericArgument extends ArgumentPluginBase {
     }
 
     if (!empty($this->options['break_phrase'])) {
-      $break = static::breakString($this->argument, TRUE);
+      $break = static::breakString($this->argument, FALSE);
       $this->value = $break->value;
       $this->operator = $break->operator;
     }
@@ -100,7 +96,7 @@ class NumericArgument extends ArgumentPluginBase {
     $this->ensureMyTable();
 
     if (!empty($this->options['break_phrase'])) {
-      $break = static::breakString($this->argument, TRUE);
+      $break = static::breakString($this->argument, FALSE);
       $this->value = $break->value;
       $this->operator = $break->operator;
     }
@@ -127,6 +123,19 @@ class NumericArgument extends ArgumentPluginBase {
    */
   public function getSortName() {
     return $this->t('Numerical', array(), array('context' => 'Sort order'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getContextDefinition() {
+    if ($context_definition = parent::getContextDefinition()) {
+      return $context_definition;
+    }
+
+    // If the parent does not provide a context definition through the
+    // validation plugin, fall back to the integer type.
+    return new ContextDefinition('integer', $this->adminLabel(), FALSE);
   }
 
 }

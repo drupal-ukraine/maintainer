@@ -1,16 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\content_translation\Tests\ContentTranslationEnableTest.
- */
-
 namespace Drupal\content_translation\Tests;
 
 use Drupal\simpletest\WebTestBase;
 
 /**
- * Test enabling content translation after other modules.
+ * Test enabling content translation module.
  *
  * @group content_translation
  */
@@ -29,14 +24,18 @@ class ContentTranslationEnableTest extends WebTestBase {
     // Enable modules and make sure the related config entity type definitions
     // are installed.
     $edit = [
-      'modules[Multilingual][content_translation][enable]' => TRUE,
-      'modules[Multilingual][language][enable]' => TRUE,
+      'modules[content_translation][enable]' => TRUE,
+      'modules[language][enable]' => TRUE,
     ];
     $this->drupalPostForm('admin/modules', $edit, t('Install'));
 
+    // Status messages are shown.
+    $this->assertText(t('This site has only a single language enabled. Add at least one more language in order to translate content.'));
+    $this->assertText(t('Enable translation for content types, taxonomy vocabularies, accounts, or any other element you wish to translate.'));
+
     // No pending updates should be available.
     $this->drupalGet('admin/reports/status');
-    $requirement_value = $this->cssSelect("tr.system-status-report__entry th:contains('Entity/field definitions') + td");
+    $requirement_value = $this->cssSelect("details.system-status-report__entry summary:contains('Entity/field definitions') + div");
     $this->assertEqual(t('Up to date'), trim((string) $requirement_value[0]));
 
     $this->drupalGet('admin/config/regional/content-language');
@@ -54,7 +53,7 @@ class ContentTranslationEnableTest extends WebTestBase {
 
     // No pending updates should be available.
     $this->drupalGet('admin/reports/status');
-    $requirement_value = $this->cssSelect("tr.system-status-report__entry th:contains('Entity/field definitions') + td");
+    $requirement_value = $this->cssSelect("details.system-status-report__entry summary:contains('Entity/field definitions') + div");
     $this->assertEqual(t('Up to date'), trim((string) $requirement_value[0]));
 
     // Create a node type and check the content translation settings are now

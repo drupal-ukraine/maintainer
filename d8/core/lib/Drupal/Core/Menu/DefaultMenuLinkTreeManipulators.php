@@ -1,16 +1,12 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Menu\DefaultMenuLinkTreeManipulators.
- */
-
 namespace Drupal\Core\Menu;
 
 use Drupal\Core\Access\AccessManagerInterface;
 use Drupal\Core\Access\AccessResult;
-use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\node\NodeInterface;
 
 /**
  * Provides a couple of menu link tree manipulators.
@@ -38,11 +34,11 @@ class DefaultMenuLinkTreeManipulators {
   protected $account;
 
   /**
-   * The entity query factory.
+   * The entity type manager.
    *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-   protected $queryFactory;
+  protected $entityTypeManager;
 
   /**
    * Constructs a \Drupal\Core\Menu\DefaultMenuLinkTreeManipulators object.
@@ -51,13 +47,13 @@ class DefaultMenuLinkTreeManipulators {
    *   The access manager.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The current user.
-   * @param \Drupal\Core\Entity\Query\QueryFactory $query_factory
-   *   The entity query factory.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    */
-  public function __construct(AccessManagerInterface $access_manager, AccountInterface $account, QueryFactory $query_factory) {
+  public function __construct(AccessManagerInterface $access_manager, AccountInterface $account, EntityTypeManagerInterface $entity_type_manager) {
     $this->accessManager = $access_manager;
     $this->account = $account;
-    $this->queryFactory = $query_factory;
+    $this->entityTypeManager = $entity_type_manager;
   }
 
   /**
@@ -139,7 +135,7 @@ class DefaultMenuLinkTreeManipulators {
     if ($node_links) {
       $nids = array_keys($node_links);
 
-      $query = $this->queryFactory->get('node');
+      $query = $this->entityTypeManager->getStorage('node')->getQuery();
       $query->condition('nid', $nids, 'IN');
 
       // Allows admins to view all nodes, by both disabling node_access
@@ -152,7 +148,7 @@ class DefaultMenuLinkTreeManipulators {
       }
       else {
         $access_result->addCacheContexts(['user.node_grants:view']);
-        $query->condition('status', NODE_PUBLISHED);
+        $query->condition('status', NodeInterface::PUBLISHED);
       }
 
       $nids = $query->execute();

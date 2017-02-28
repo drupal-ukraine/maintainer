@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\user\Plugin\migrate\source\d6\User.
- */
-
 namespace Drupal\user\Plugin\migrate\source\d6;
 
 use Drupal\migrate\Row;
@@ -25,7 +20,7 @@ class User extends DrupalSqlBase {
   public function query() {
     return $this->select('users', 'u')
       ->fields('u', array_keys($this->baseFields()))
-      ->condition('uid', 0, '>');
+      ->condition('u.uid', 0, '>');
   }
 
   /**
@@ -105,6 +100,7 @@ class User extends DrupalSqlBase {
       'name' => $this->t('Username'),
       'pass' => $this->t('Password'),
       'mail' => $this->t('Email address'),
+      'theme' => $this->t('Theme'),
       'signature' => $this->t('Signature'),
       'signature_format' => $this->t('Signature format'),
       'created' => $this->t('Registered timestamp'),

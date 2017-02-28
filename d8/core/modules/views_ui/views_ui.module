@@ -23,7 +23,7 @@ function views_ui_help($route_name, RouteMatchInterface $route_match) {
       $output .= '<h3>' . t('Uses') . '</h3>';
       $output .= '<dl>';
       $output .= '<dt>' . t('Creating and managing views') . '</dt>';
-      $output .= '<dd>' . t('Views can be created from the <a href=":list">Views list page</a> by using the "Add new view" action. Existing views can be managed from the <a href=":list">Views list page</a> by locating the view in the "Enabled" or "Disabled" list and selecting the desired operation action, for example "Edit".', array(':list' => \Drupal::url('entity.view.collection', array('name' => 'views_ui')))) . '</dd>';
+      $output .= '<dd>' . t('Views can be created from the <a href=":list">Views list page</a> by using the "Add view" action. Existing views can be managed from the <a href=":list">Views list page</a> by locating the view in the "Enabled" or "Disabled" list and selecting the desired operation action, for example "Edit".', array(':list' => \Drupal::url('entity.view.collection', array('name' => 'views_ui')))) . '</dd>';
       $output .= '<dt>' . t('Enabling and disabling views') . '<dt>';
       $output .= '<dd>' . t('Views can be enabled or disabled from the <a href=":list">Views list page</a>. To enable a view, find the view within the "Disabled" list and select the "Enable" operation. To disable a view find the view within the "Enabled" list and select the "Disable" operation.', array(':list' => \Drupal::url('entity.view.collection', array('name' => 'views_ui')))) . '</dd>';
       $output .= '<dt>' . t('Exporting and importing views') . '</dt>';
@@ -80,10 +80,23 @@ function views_ui_theme() {
       'file' => 'views_ui.theme.inc',
     ),
 
-    // list views
+    // Legacy theme hook for displaying views info.
     'views_ui_view_info' => array(
       'variables' => array('view' => NULL, 'displays' => NULL),
       'file' => 'views_ui.theme.inc',
+    ),
+
+    // List views.
+    'views_ui_views_listing_table' => array(
+      'variables' => array(
+        'headers' => NULL,
+        'rows' => NULL,
+        'attributes' => array(),
+      ),
+      'file' => 'views_ui.theme.inc',
+    ),
+    'views_ui_view_displays_list' => array(
+      'variables' => array('displays' => array()),
     ),
 
     // Group of filters.
@@ -121,7 +134,9 @@ function views_ui_preprocess_views_view(&$variables) {
 
   // Render title for the admin preview.
   if (!empty($view->live_preview)) {
-    $variables['title']['#markup'] = $view->getTitle();
+    $variables['title'] = [
+      '#markup' => $view->getTitle()
+    ];
   }
 
   if (!empty($view->live_preview) && \Drupal::moduleHandler()->moduleExists('contextual')) {
@@ -270,7 +285,7 @@ function views_ui_contextual_links_suppress($set = NULL) {
  * @see views_ui_contextual_links_suppress_pop()
  */
 function views_ui_contextual_links_suppress_push() {
-  views_ui_contextual_links_suppress(((int) views_ui_contextual_links_suppress())+1);
+  views_ui_contextual_links_suppress(((int) views_ui_contextual_links_suppress()) + 1);
 }
 
 /**
@@ -279,7 +294,7 @@ function views_ui_contextual_links_suppress_push() {
  * @see views_ui_contextual_links_suppress_push()
  */
 function views_ui_contextual_links_suppress_pop() {
-  views_ui_contextual_links_suppress(((int) views_ui_contextual_links_suppress())-1);
+  views_ui_contextual_links_suppress(((int) views_ui_contextual_links_suppress()) - 1);
 }
 
 /**

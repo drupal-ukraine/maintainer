@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\taxonomy\Tests\TermTest.
- */
-
 namespace Drupal\taxonomy\Tests;
 
 use Drupal\Component\Utility\Tags;
@@ -125,7 +120,7 @@ class TermTest extends TaxonomyTestBase {
     // Set limit to 10 terms per page. Set variable to 9 so 10 terms appear.
     $this->config('taxonomy.settings')->set('terms_per_page_admin', '9')->save();
     $term1 = $this->createTerm($this->vocabulary);
-    $terms_array = '';
+    $terms_array = [];
 
     $taxonomy_storage = $this->container->get('entity.manager')->getStorage('taxonomy_term');
 
@@ -166,7 +161,7 @@ class TermTest extends TaxonomyTestBase {
     for ($x = 1; $x <= 17; $x++) {
       $this->assertNoText($terms_array[$x]->getName(), $terms_array[$x]->getName() . ' not found on Page 3');
     }
-    for ($x =18; $x <= 25; $x++) {
+    for ($x = 18; $x <= 25; $x++) {
       $this->assertText($terms_array[$x]->getName(), $terms_array[$x]->getName() . ' found on Page 3');
     }
   }
@@ -230,10 +225,10 @@ class TermTest extends TaxonomyTestBase {
     // three letters.
     // @see https://www.drupal.org/node/2397691
     $terms = array(
-      'term1' => 'a'. $this->randomMachineName(),
-      'term2' => 'b'. $this->randomMachineName(),
-      'term3' => 'c'. $this->randomMachineName() . ', ' . $this->randomMachineName(),
-      'term4' => 'd'. $this->randomMachineName(),
+      'term1' => 'a' . $this->randomMachineName(),
+      'term2' => 'b' . $this->randomMachineName(),
+      'term3' => 'c' . $this->randomMachineName() . ', ' . $this->randomMachineName(),
+      'term4' => 'd' . $this->randomMachineName(),
     );
 
     $edit = array();
@@ -260,7 +255,12 @@ class TermTest extends TaxonomyTestBase {
 
     // Save, creating the terms.
     $this->drupalPostForm('node/add/article', $edit, t('Save'));
-    $this->assertRaw(t('@type %title has been created.', array('@type' => t('Article'), '%title' => $edit['title[0][value]'])), 'The node was created successfully.');
+    $this->assertText(t('@type @title has been created.', array('@type' => t('Article'), '@title' => $edit['title[0][value]'])), 'The node was created successfully.');
+
+    // Verify that the creation message contains a link to a node.
+    $view_link = $this->xpath('//div[@class="messages"]//a[contains(@href, :href)]', array(':href' => 'node/'));
+    $this->assert(isset($view_link), 'The message area contains a link to a node');
+
     foreach ($terms as $term) {
       $this->assertText($term, 'The term was saved and appears on the node page.');
     }
@@ -495,10 +495,10 @@ class TermTest extends TaxonomyTestBase {
 
     // Create a new term in a different vocabulary with the same name.
     $new_vocabulary = $this->createVocabulary();
-    $new_term = entity_create('taxonomy_term', array(
+    $new_term = Term::create([
       'name' => $term->getName(),
       'vid' => $new_vocabulary->id(),
-    ));
+    ]);
     $new_term->save();
 
     // Load multiple terms with the same name.
@@ -549,6 +549,40 @@ class TermTest extends TaxonomyTestBase {
     $this->assertRaw($term->getName(), 'Term is displayed when editing the node.');
     $this->drupalPostForm(NULL, array(), t('Save'));
     $this->assertRaw($term->getName(), 'Term is displayed after saving the node with no changes.');
+  }
+
+  /**
+   * Check the breadcrumb on edit and delete a term page.
+   */
+  public function testTermBreadcrumbs() {
+    $edit = [
+      'name[0][value]' => $this->randomMachineName(14),
+      'description[0][value]' => $this->randomMachineName(100),
+      'parent[]' => [0],
+    ];
+
+    // Create the term.
+    $this->drupalPostForm('admin/structure/taxonomy/manage/' . $this->vocabulary->id() . '/add', $edit, t('Save'));
+
+    $terms = taxonomy_term_load_multiple_by_name($edit['name[0][value]']);
+    $term = reset($terms);
+    $this->assertNotNull($term, 'Term found in database.');
+
+    // Check the breadcrumb on the term edit page.
+    $this->drupalGet('taxonomy/term/' . $term->id() . '/edit');
+    $breadcrumbs = $this->cssSelect('nav.breadcrumb ol li a');
+    $this->assertIdentical(count($breadcrumbs), 2, 'The breadcrumbs are present on the page.');
+    $this->assertIdentical((string) $breadcrumbs[0], 'Home', 'First breadcrumb text is Home');
+    $this->assertIdentical((string) $breadcrumbs[1], $term->label(), 'Second breadcrumb text is term name on term edit page.');
+    $this->assertEscaped((string) $breadcrumbs[1], 'breadcrumbs displayed and escaped.');
+
+    // Check the breadcrumb on the term delete page.
+    $this->drupalGet('taxonomy/term/' . $term->id() . '/delete');
+    $breadcrumbs = $this->cssSelect('nav.breadcrumb ol li a');
+    $this->assertIdentical(count($breadcrumbs), 2, 'The breadcrumbs are present on the page.');
+    $this->assertIdentical((string) $breadcrumbs[0], 'Home', 'First breadcrumb text is Home');
+    $this->assertIdentical((string) $breadcrumbs[1], $term->label(), 'Second breadcrumb text is term name on term delete page.');
+    $this->assertEscaped((string) $breadcrumbs[1], 'breadcrumbs displayed and escaped.');
   }
 
 }

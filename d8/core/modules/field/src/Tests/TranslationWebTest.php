@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\field\Tests\TranslationWebTest.
- */
-
 namespace Drupal\field\Tests;
 
 use Drupal\Component\Utility\Unicode;
@@ -65,14 +60,14 @@ class TranslationWebTest extends FieldTestBase {
       'type' => 'test_field',
       'cardinality' => 4,
     );
-    entity_create('field_storage_config', $field_storage)->save();
+    FieldStorageConfig::create($field_storage)->save();
     $this->fieldStorage = FieldStorageConfig::load($this->entityTypeId . '.' . $this->fieldName);
 
     $field = array(
       'field_storage' => $this->fieldStorage,
       'bundle' => $this->entityTypeId,
     );
-    entity_create('field_config', $field)->save();
+    FieldConfig::create($field)->save();
     $this->field = FieldConfig::load($this->entityTypeId . '.' . $field['bundle'] . '.' . $this->fieldName);
 
     entity_get_form_display($this->entityTypeId, $this->entityTypeId, 'default')
@@ -96,7 +91,9 @@ class TranslationWebTest extends FieldTestBase {
 
     // Prepare the field translations.
     field_test_entity_info_translatable($this->entityTypeId, TRUE);
-    $entity = entity_create($this->entityTypeId);
+    $entity = $this->container->get('entity_type.manager')
+      ->getStorage($this->entityTypeId)
+      ->create();
     $available_langcodes = array_flip(array_keys($this->container->get('language_manager')->getLanguages()));
     $field_name = $this->fieldStorage->getName();
 
@@ -127,10 +124,13 @@ class TranslationWebTest extends FieldTestBase {
    */
   private function checkTranslationRevisions($id, $revision_id, $available_langcodes) {
     $field_name = $this->fieldStorage->getName();
-    $entity = entity_revision_load($this->entityTypeId, $revision_id);
+    $entity = $this->container->get('entity_type.manager')
+      ->getStorage($this->entityTypeId)
+      ->loadRevision($revision_id);
     foreach ($available_langcodes as $langcode => $value) {
       $passed = $entity->getTranslation($langcode)->{$field_name}->value == $value + 1;
       $this->assertTrue($passed, format_string('The @language translation for revision @revision was correctly stored', array('@language' => $langcode, '@revision' => $entity->getRevisionId())));
     }
   }
+
 }

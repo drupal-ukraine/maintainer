@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\filter\InOperator.
- */
-
 namespace Drupal\views\Plugin\views\filter;
 
 use Drupal\Component\Utility\Unicode;
@@ -59,8 +54,8 @@ class InOperator extends FilterPluginBase {
    * This can use a guard to be used to reduce database hits as much as
    * possible.
    *
-   * @return
-   *   Return the stored values in $this->valueOptions if someone expects it.
+   * @return array|null
+   *   The stored values from $this->valueOptions.
    */
   public function getValueOptions() {
     if (isset($this->valueOptions)) {
@@ -211,7 +206,7 @@ class InOperator extends FilterPluginBase {
       }
 
       if (empty($this->options['expose']['multiple'])) {
-        if (empty($this->options['expose']['required']) && (empty($default_value) || !empty($this->options['expose']['reduce']))) {
+        if (empty($this->options['expose']['required']) && (empty($default_value) || !empty($this->options['expose']['reduce'])) || isset($this->options['value']['all'])) {
           $default_value = 'All';
         }
         elseif (empty($default_value)) {
@@ -287,15 +282,17 @@ class InOperator extends FilterPluginBase {
     return $options;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function acceptExposedInput($input) {
-    // A very special override because the All state for this type of
-    // filter could have a default:
     if (empty($this->options['exposed'])) {
       return TRUE;
     }
 
-    // If this is non-multiple and non-required, then this filter will
-    // participate, but using the default settings, *if* 'limit is true.
+    // The "All" state for this type of filter could have a default value. If
+    // this is a non-multiple and non-required option, then this filter will
+    // participate by using the default settings *if* 'limit' is true.
     if (empty($this->options['expose']['multiple']) && empty($this->options['expose']['required']) && !empty($this->options['expose']['limit'])) {
       $identifier = $this->options['expose']['identifier'];
       if ($input[$identifier] == 'All') {
@@ -415,7 +412,7 @@ class InOperator extends FilterPluginBase {
 
   public function validate() {
     $this->getValueOptions();
-    $errors = array();
+    $errors = parent::validate();
 
     // If the operator is an operator which doesn't require a value, there is
     // no need for additional validation.

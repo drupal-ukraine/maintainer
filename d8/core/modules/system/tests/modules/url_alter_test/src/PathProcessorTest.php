@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\url_alter_test\PathProcessorTest.
- */
-
 namespace Drupal\url_alter_test;
 
 use Drupal\Core\PathProcessor\InboundPathProcessorInterface;
@@ -52,6 +47,11 @@ class PathProcessorTest implements InboundPathProcessorInterface, OutboundPathPr
           $bubbleable_metadata->addCacheTags($account->getCacheTags());
         }
       }
+    }
+
+    // Verify that $options are alterable.
+    if ($path == '/user/login') {
+      $options['query']['foo'] = 'bar';
     }
 
     // Rewrite forum/ to community/.

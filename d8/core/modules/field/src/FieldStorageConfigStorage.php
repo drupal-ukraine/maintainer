@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\field\FieldStorageConfigStorage.
- */
-
 namespace Drupal\field;
 
 use Drupal\Component\Uuid\UuidInterface;
@@ -69,7 +64,7 @@ class FieldStorageConfigStorage extends ConfigEntityStorage {
    *   The module handler.
    * @param \Drupal\Core\State\StateInterface $state
    *   The state key value store.
-   * @param \Drupal\Component\Plugin\PluginManagerInterface\FieldTypePluginManagerInterface
+   * @param \Drupal\Component\Plugin\PluginManagerInterface\FieldTypePluginManagerInterface $field_type_manager
    *   The field type plugin manager.
    */
   public function __construct(EntityTypeInterface $entity_type, ConfigFactoryInterface $config_factory, UuidInterface $uuid_service, LanguageManagerInterface $language_manager, EntityManagerInterface $entity_manager, ModuleHandlerInterface $module_handler, StateInterface $state, FieldTypePluginManagerInterface $field_type_manager) {
@@ -155,8 +150,12 @@ class FieldStorageConfigStorage extends ConfigEntityStorage {
    * {@inheritdoc}
    */
   protected function mapFromStorageRecords(array $records) {
-    foreach ($records as &$record) {
+    foreach ($records as $id => &$record) {
       $class = $this->fieldTypeManager->getPluginClass($record['type']);
+      if (empty($class)) {
+        $config_id = $this->getPrefix() . $id;
+        throw new \RuntimeException("Unable to determine class for field type '{$record['type']}' found in the '$config_id' configuration");
+      }
       $record['settings'] = $class::storageSettingsFromConfigData($record['settings']);
     }
     return parent::mapFromStorageRecords($records);

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\Core\Cache\BackendChainImplementationUnitTest.
- */
-
 namespace Drupal\Tests\Core\Cache;
 
 use Drupal\Core\Cache\BackendChain;
@@ -51,9 +46,9 @@ class BackendChainImplementationUnitTest extends UnitTestCase {
     parent::setUp();
 
     // Set up three memory backends to be used in the chain.
-    $this->firstBackend = new MemoryBackend('foo');
-    $this->secondBackend = new MemoryBackend('bar');
-    $this->thirdBackend = new MemoryBackend('baz');
+    $this->firstBackend = new MemoryBackend();
+    $this->secondBackend = new MemoryBackend();
+    $this->thirdBackend = new MemoryBackend();
 
     // Set an initial fixed dataset for all testing. The next three data
     // collections will test two edge cases (last backend has the data, and
@@ -302,4 +297,5 @@ class BackendChainImplementationUnitTest extends UnitTestCase {
 
     $chain->removeBin();
   }
+
 }

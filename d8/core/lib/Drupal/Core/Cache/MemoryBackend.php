@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Cache\MemoryBackend.
- */
-
 namespace Drupal\Core\Cache;
 
 /**
@@ -23,15 +18,6 @@ class MemoryBackend implements CacheBackendInterface, CacheTagsInvalidatorInterf
    * Array to store cache objects.
    */
   protected $cache = array();
-
-  /**
-   * Constructs a MemoryBackend object.
-   *
-   * @param string $bin
-   *   The cache bin for which the object is created.
-   */
-  public function __construct($bin) {
-  }
 
   /**
    * {@inheritdoc}
@@ -164,7 +150,9 @@ class MemoryBackend implements CacheBackendInterface, CacheTagsInvalidatorInterf
    */
   public function invalidateMultiple(array $cids) {
     foreach ($cids as $cid) {
-      $this->cache[$cid]->expire = $this->getRequestTime() - 1;
+      if (isset($this->cache[$cid])) {
+        $this->cache[$cid]->expire = $this->getRequestTime() - 1;
+      }
     }
   }
 

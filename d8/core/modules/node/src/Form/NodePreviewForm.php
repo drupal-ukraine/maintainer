@@ -1,14 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\node\Form\NodePreviewForm.
- */
-
 namespace Drupal\node\Form;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Form\FormBase;
@@ -19,7 +13,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Contains a form for switching the view mode of a node during preview.
  */
-class NodePreviewForm extends FormBase implements ContainerInjectionInterface {
+class NodePreviewForm extends FormBase {
 
   /**
    * The entity manager service.
@@ -78,7 +72,12 @@ class NodePreviewForm extends FormBase implements ContainerInjectionInterface {
   public function buildForm(array $form, FormStateInterface $form_state, EntityInterface $node = NULL) {
     $view_mode = $node->preview_view_mode;
 
-    $query_options = $node->isNew() ? array('query' => array('uuid' => $node->uuid())) : array();
+    $query_options = array('query' => array('uuid' => $node->uuid()));
+    $query = $this->getRequest()->query;
+    if ($query->has('destination')) {
+      $query_options['query']['destination'] = $query->get('destination');
+    }
+
     $form['backlink'] = array(
       '#type' => 'link',
       '#title' => $this->t('Back to content editing'),
@@ -86,9 +85,11 @@ class NodePreviewForm extends FormBase implements ContainerInjectionInterface {
       '#options' => array('attributes' => array('class' => array('node-preview-backlink'))) + $query_options,
     );
 
-    $view_mode_options = $this->entityManager->getViewModeOptionsByBundle('node', $node->bundle());
+    // Always show full as an option, even if the display is not enabled.
+    $view_mode_options = ['full' => $this->t('Full')] + $this->entityManager->getViewModeOptionsByBundle('node', $node->bundle());
 
     // Unset view modes that are not used in the front end.
+    unset($view_mode_options['default']);
     unset($view_mode_options['rss']);
     unset($view_mode_options['search_index']);
 
@@ -122,10 +123,18 @@ class NodePreviewForm extends FormBase implements ContainerInjectionInterface {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $form_state->setRedirect('entity.node.preview', array(
+    $route_parameters = [
       'node_preview' => $form_state->getValue('uuid'),
       'view_mode_id' => $form_state->getValue('view_mode'),
-    ));
+    ];
+
+    $options = [];
+    $query = $this->getRequest()->query;
+    if ($query->has('destination')) {
+      $options['query']['destination'] = $query->get('destination');
+      $query->remove('destination');
+    }
+    $form_state->setRedirect('entity.node.preview', $route_parameters, $options);
   }
 
 }

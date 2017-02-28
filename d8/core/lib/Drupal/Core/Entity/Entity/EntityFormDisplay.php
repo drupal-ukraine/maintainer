@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\Entity\EntityFormDisplay.
- */
-
 namespace Drupal\Core\Entity\Entity;
 
 use Drupal\Core\Entity\EntityConstraintViolationListInterface;
@@ -241,7 +236,7 @@ class EntityFormDisplay extends EntityDisplayBase implements EntityFormDisplayIn
     // Flag entity level violations.
     foreach ($violations->getEntityViolations() as $violation) {
       /** @var \Symfony\Component\Validator\ConstraintViolationInterface $violation */
-      $form_state->setErrorByName('', $violation->getMessage());
+      $form_state->setError($form, $violation->getMessage());
     }
 
     $this->flagWidgetsErrorsFromViolations($violations, $form, $form_state);

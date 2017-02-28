@@ -57,7 +57,14 @@ class FragmentListener implements EventSubscriberInterface
     {
         $request = $event->getRequest();
 
-        if ($request->attributes->has('_controller') || $this->fragmentPath !== rawurldecode($request->getPathInfo())) {
+        if ($this->fragmentPath !== rawurldecode($request->getPathInfo())) {
+            return;
+        }
+
+        if ($request->attributes->has('_controller')) {
+            // Is a sub-request: no need to parse _path but it should still be removed from query parameters as below.
+            $request->query->remove('_path');
+
             return;
         }
 
@@ -74,7 +81,7 @@ class FragmentListener implements EventSubscriberInterface
     protected function validateRequest(Request $request)
     {
         // is the Request safe?
-        if (!$request->isMethodSafe()) {
+        if (!$request->isMethodSafe(false)) {
             throw new AccessDeniedHttpException();
         }
 

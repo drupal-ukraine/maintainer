@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Tests\Plugin\ExposedFormTest.
- */
-
 namespace Drupal\views\Tests\Plugin;
 
 use Drupal\Component\Utility\Html;
@@ -13,6 +8,7 @@ use Drupal\system\Tests\Cache\AssertPageCacheContextsAndTagsTrait;
 use Drupal\views\Tests\ViewTestBase;
 use Drupal\views\ViewExecutable;
 use Drupal\views\Views;
+use Drupal\views\Entity\View;
 
 /**
  * Tests exposed forms functionality.
@@ -40,6 +36,8 @@ class ExposedFormTest extends ViewTestBase {
   protected function setUp() {
     parent::setUp();
 
+    $this->enableViewsTestModule();
+
     $this->drupalCreateContentType(array('type' => 'article'));
 
     // Create some random nodes.
@@ -52,10 +50,10 @@ class ExposedFormTest extends ViewTestBase {
    * Tests the submit button.
    */
   public function testSubmitButton() {
-    // Test the submit button value defaults to 'Apply'.
+    // Test the submit button value defaults to 'Filter'.
     $this->drupalGet('test_exposed_form_buttons');
     $this->assertResponse(200);
-    $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', t('Apply'));
+    $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', t('Filter'));
 
     // Rename the label of the submit button.
     $view = Views::getView('test_exposed_form_buttons');
@@ -70,7 +68,7 @@ class ExposedFormTest extends ViewTestBase {
     $this->drupalGet('test_exposed_form_buttons');
     $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', $expected_label);
 
-    // Make sure an empty label uses the default 'Apply' button value too.
+    // Make sure an empty label uses the default 'Filter' button value too.
     $view = Views::getView('test_exposed_form_buttons');
     $view->setDisplay();
 
@@ -79,9 +77,72 @@ class ExposedFormTest extends ViewTestBase {
     $view->display_handler->setOption('exposed_form', $exposed_form);
     $view->save();
 
-    // Make sure the submit button label shows 'Apply'.
+    // Make sure the submit button label shows 'Filter'.
     $this->drupalGet('test_exposed_form_buttons');
-    $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', t('Apply'));
+    $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', t('Filter'));
+  }
+
+  /**
+   * Tests the exposed form with a non-standard identifier.
+   */
+  public function testExposedIdentifier() {
+    // Alter the identifier of the filter to a random string.
+    $view = Views::getView('test_exposed_form_buttons');
+    $view->setDisplay();
+    $identifier = 'new_identifier';
+    $view->displayHandlers->get('default')->overrideOption('filters', array(
+      'type' => [
+        'exposed' => TRUE,
+        'field' => 'type',
+        'id' => 'type',
+        'table' => 'node_field_data',
+        'plugin_id' => 'in_operator',
+        'entity_type' => 'node',
+        'entity_field' => 'type',
+        'expose' => [
+          'identifier' => $identifier,
+          'label' => 'Content: Type',
+          'operator_id' => 'type_op',
+          'reduce' => FALSE,
+          'description' => 'Exposed overridden description'
+        ],
+      ]
+    ));
+    $view->save();
+    $this->drupalGet('test_exposed_form_buttons', array('query' => array($identifier => 'article')));
+    $this->assertFieldById(Html::getId('edit-' . $identifier), 'article', "Article type filter set with new identifier.");
+
+    // Alter the identifier of the filter to a random string containing
+    // restricted characters.
+    $view = Views::getView('test_exposed_form_buttons');
+    $view->setDisplay();
+    $identifier = 'bad identifier';
+    $view->displayHandlers->get('default')->overrideOption('filters', array(
+      'type' => [
+        'exposed' => TRUE,
+        'field' => 'type',
+        'id' => 'type',
+        'table' => 'node_field_data',
+        'plugin_id' => 'in_operator',
+        'entity_type' => 'node',
+        'entity_field' => 'type',
+        'expose' => [
+          'identifier' => $identifier,
+          'label' => 'Content: Type',
+          'operator_id' => 'type_op',
+          'reduce' => FALSE,
+          'description' => 'Exposed overridden description'
+        ],
+      ]
+    ));
+    $this->executeView($view);
+
+    $errors = $view->validate();
+    $expected = [
+      'default' => ['This identifier has illegal characters.'],
+      'page_1' => ['This identifier has illegal characters.'],
+    ];
+    $this->assertEqual($errors, $expected);
   }
 
   /**
@@ -109,6 +170,9 @@ class ExposedFormTest extends ViewTestBase {
     $this->drupalGet('test_exposed_form_buttons', array('query' => array('type' => 'article', 'op' => 'Reset')));
     $this->assertResponse(200);
     $this->assertFieldById('edit-type', 'All', 'Article type filter has been reset.');
+
+    // Test the button is hidden after reset.
+    $this->assertNoField('edit-reset');
 
     // Rename the label of the reset button.
     $view = Views::getView('test_exposed_form_buttons');
@@ -148,9 +212,52 @@ class ExposedFormTest extends ViewTestBase {
   }
 
   /**
+   * Tests overriding the default render option with checkboxes.
+   */
+  public function testExposedFormRenderCheckboxes() {
+    // Make sure we have at least two options for node type.
+    $this->drupalCreateContentType(['type' => 'page']);
+    $this->drupalCreateNode(['type' => 'page']);
+
+    // Use a test theme to convert multi-select elements into checkboxes.
+    \Drupal::service('theme_handler')->install(array('views_test_checkboxes_theme'));
+    $this->config('system.theme')
+      ->set('default', 'views_test_checkboxes_theme')
+      ->save();
+
+    // Set the "type" filter to multi-select.
+    $view = Views::getView('test_exposed_form_buttons');
+    $filter = $view->getHandler('page_1', 'filter', 'type');
+    $filter['expose']['multiple'] = TRUE;
+    $view->setHandler('page_1', 'filter', 'type', $filter);
+
+    // Only display 5 items per page so we can test that paging works.
+    $display = &$view->storage->getDisplay('default');
+    $display['display_options']['pager']['options']['items_per_page'] = 5;
+
+    $view->save();
+    $this->drupalGet('test_exposed_form_buttons');
+
+    $actual = $this->xpath('//form//input[@type="checkbox" and @name="type[article]"]');
+    $this->assertEqual(count($actual), 1, 'Article option renders as a checkbox.');
+    $actual = $this->xpath('//form//input[@type="checkbox" and @name="type[page]"]');
+    $this->assertEqual(count($actual), 1, 'Page option renders as a checkbox');
+
+    // Ensure that all results are displayed.
+    $rows = $this->xpath("//div[contains(@class, 'views-row')]");
+    $this->assertEqual(count($rows), 5, '5 rows are displayed by default on the first page when no options are checked.');
+
+    $this->clickLink('Page 2');
+    $rows = $this->xpath("//div[contains(@class, 'views-row')]");
+    $this->assertEqual(count($rows), 1, '1 row is displayed by default on the second page when no options are checked.');
+    $this->assertNoText('An illegal choice has been detected. Please contact the site administrator.');
+  }
+
+  /**
    * Tests the exposed block functionality.
    */
   public function testExposedBlock() {
+    $this->drupalCreateContentType(['type' => 'page']);
     $view = Views::getView('test_exposed_block');
     $view->setDisplay('page_1');
     $block = $this->drupalPlaceBlock('views_exposed_filter_block:test_exposed_block-page_1');
@@ -167,20 +274,29 @@ class ExposedFormTest extends ViewTestBase {
     // Test there is only one views exposed form on the page.
     $elements = $this->xpath('//form[@id=:id]', array(':id' => $this->getExpectedExposedFormId($view)));
     $this->assertEqual(count($elements), 1, 'One exposed form block found.');
+
+    // Test that the correct option is selected after form submission.
+    $this->assertCacheContext('url');
+    $this->assertOptionSelected('edit-type', 'All');
+    foreach (['All', 'article', 'page'] as $argument) {
+      $this->drupalGet('test_exposed_block', ['query' => ['type' => $argument]]);
+      $this->assertCacheContext('url');
+      $this->assertOptionSelected('edit-type', $argument);
+    }
   }
 
   /**
    * Test the input required exposed form type.
    */
   public function testInputRequired() {
-    $view = entity_load('view', 'test_exposed_form_buttons');
+    $view = View::load('test_exposed_form_buttons');
     $display = &$view->getDisplay('default');
     $display['display_options']['exposed_form']['type'] = 'input_required';
     $view->save();
 
     $this->drupalGet('test_exposed_form_buttons');
     $this->assertResponse(200);
-    $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', t('Apply'));
+    $this->helperButtonHasLabel('edit-submit-test-exposed-form-buttons', t('Filter'));
 
     // Ensure that no results are displayed.
     $rows = $this->xpath("//div[contains(@class, 'views-row')]");
@@ -282,6 +398,25 @@ class ExposedFormTest extends ViewTestBase {
    */
   protected function getExpectedExposedFormId(ViewExecutable $view) {
     return Html::cleanCssIdentifier('views-exposed-form-' . $view->storage->id() . '-' . $view->current_display);
+  }
+
+  /**
+   * Tests a view which is rendered after a form with a validation error.
+   */
+  public function testFormErrorWithExposedForm() {
+    $this->drupalGet('views_test_data_error_form_page');
+    $this->assertResponse(200);
+    $form = $this->cssSelect('form.views-exposed-form');
+    $this->assertTrue($form, 'The exposed form element was found.');
+    $this->assertRaw(t('Filter'), 'Ensure the exposed form is rendered before submitting the normal form.');
+    $this->assertRaw('<div class="views-row">', 'Views result shown.');
+
+    $this->drupalPostForm(NULL, array(), t('Submit'));
+    $this->assertResponse(200);
+    $form = $this->cssSelect('form.views-exposed-form');
+    $this->assertTrue($form, 'The exposed form element was found.');
+    $this->assertRaw(t('Filter'), 'Ensure the exposed form is rendered after submitting the normal form.');
+    $this->assertRaw('<div class="views-row">', 'Views result shown.');
   }
 
 }

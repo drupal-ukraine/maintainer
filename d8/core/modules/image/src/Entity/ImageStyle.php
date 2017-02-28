@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\image\Entity\ImageStyle.
- */
-
 namespace Drupal\image\Entity;
 
 use Drupal\Core\Cache\Cache;
@@ -21,7 +16,7 @@ use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\StreamWrapper\StreamWrapperInterface;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
-
+use Drupal\Core\Entity\Entity\EntityViewDisplay;
 /**
  * Defines an image style configuration entity.
  *
@@ -36,6 +31,7 @@ use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
  *       "flush" = "Drupal\image\Form\ImageStyleFlushForm"
  *     },
  *     "list_builder" = "Drupal\image\ImageStyleListBuilder",
+ *     "storage" = "Drupal\image\ImageStyleStorage",
  *   },
  *   admin_permission = "administer image styles",
  *   config_prefix = "style",
@@ -57,13 +53,6 @@ use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
  * )
  */
 class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, EntityWithPluginCollectionInterface {
-
-  /**
-   * The name of the image style to use as replacement upon delete.
-   *
-   * @var string
-   */
-  protected $replacementID;
 
   /**
    * The name of the image style.
@@ -128,17 +117,13 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
   public static function postDelete(EntityStorageInterface $storage, array $entities) {
     parent::postDelete($storage, $entities);
 
+    /** @var \Drupal\image\ImageStyleInterface[] $entities */
     foreach ($entities as $style) {
       // Flush cached media for the deleted style.
       $style->flush();
-      // Check whether field settings need to be updated.
-      // In case no replacement style was specified, all image fields that are
-      // using the deleted style are left in a broken state.
-      if (!$style->isSyncing() && $new_id = $style->getReplacementID()) {
-        // The deleted ID is still set as originalID.
-        $style->setName($new_id);
-        static::replaceImageStyle($style);
-      }
+      // Clear the replacement ID, if one has been previously stored.
+      /** @var \Drupal\image\ImageStyleStorageInterface $storage */
+      $storage->clearReplacementId($style->id());
     }
   }
 
@@ -152,7 +137,7 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
     if ($style->id() != $style->getOriginalId()) {
       // Loop through all entity displays looking for formatters / widgets using
       // the image style.
-      foreach (entity_load_multiple('entity_view_display') as $display) {
+      foreach (EntityViewDisplay::loadMultiple() as $display) {
         foreach ($display->getComponents() as $name => $options) {
           if (isset($options['type']) && $options['type'] == 'image' && $options['settings']['image_style'] == $style->getOriginalId()) {
             $options['settings']['image_style'] = $style->id();
@@ -161,7 +146,7 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
           }
         }
       }
-      foreach (entity_load_multiple('entity_form_display') as $display) {
+      foreach (EntityViewDisplay::loadMultiple() as $display) {
         foreach ($display->getComponents() as $name => $options) {
           if (isset($options['type']) && $options['type'] == 'image_image' && $options['settings']['preview_image_style'] == $style->getOriginalId()) {
             $options['settings']['preview_image_style'] = $style->id();
@@ -177,15 +162,28 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
    * {@inheritdoc}
    */
   public function buildUri($uri) {
-    $scheme = $this->fileUriScheme($uri);
-    if ($scheme) {
+    $source_scheme = $scheme = $this->fileUriScheme($uri);
+    $default_scheme = $this->fileDefaultScheme();
+
+    if ($source_scheme) {
       $path = $this->fileUriTarget($uri);
+      // The scheme of derivative image files only needs to be computed for
+      // source files not stored in the default scheme.
+      if ($source_scheme != $default_scheme) {
+        $class = $this->getStreamWrapperManager()->getClass($source_scheme);
+        $is_writable = $class::getType() & StreamWrapperInterface::WRITE;
+
+        // Compute the derivative URI scheme. Derivatives created from writable
+        // source stream wrappers will inherit the scheme. Derivatives created
+        // from read-only stream wrappers will fall-back to the default scheme.
+        $scheme = $is_writable ? $source_scheme : $default_scheme;
+      }
     }
     else {
       $path = $uri;
-      $scheme = $this->fileDefaultScheme();
+      $source_scheme = $scheme = $default_scheme;
     }
-    return $scheme . '://styles/' . $this->id() . '/' . $scheme . '/' . $this->addExtension($path);
+    return "$scheme://styles/{$this->id()}/$source_scheme/{$this->addExtension($path)}";
   }
 
   /**
@@ -226,7 +224,7 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
     // to the actual file path, this avoids bootstrapping PHP once the files are
     // built.
     if ($clean_urls === FALSE && file_uri_scheme($uri) == 'public' && !file_exists($uri)) {
-      $directory_path = \Drupal::service('stream_wrapper_manager')->getViaUri($uri)->getDirectoryPath();
+      $directory_path = $this->getStreamWrapperManager()->getViaUri($uri)->getDirectoryPath();
       return Url::fromUri('base:' . $directory_path . '/' . file_uri_target($uri), array('absolute' => TRUE, 'query' => $token_query))->toString();
     }
 
@@ -253,7 +251,7 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
     }
 
     // Delete the style directory in each registered wrapper.
-    $wrappers = \Drupal::service('stream_wrapper_manager')->getWrappers(StreamWrapperInterface::WRITE_VISIBLE);
+    $wrappers = $this->getStreamWrapperManager()->getWrappers(StreamWrapperInterface::WRITE_VISIBLE);
     foreach ($wrappers as $wrapper => $wrapper_data) {
       if (file_exists($directory = $wrapper . '://styles/' . $this->id())) {
         file_unmanaged_delete_recursive($directory);
@@ -380,7 +378,9 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
    * {@inheritdoc}
    */
   public function getReplacementID() {
-    return $this->get('replacementID');
+    /** @var \Drupal\image\ImageStyleStorageInterface $storage */
+    $storage = $this->entityTypeManager()->getStorage($this->getEntityTypeId());
+    return $storage->getReplacementId($this->id());
   }
 
   /**
@@ -506,6 +506,18 @@ class ImageStyle extends ConfigEntityBase implements ImageStyleInterface, Entity
    */
   protected function fileDefaultScheme() {
     return file_default_scheme();
+  }
+
+  /**
+   * Gets the stream wrapper manager service.
+   *
+   * @return \Drupal\Core\StreamWrapper\StreamWrapperManagerInterface
+   *   The stream wrapper manager service
+   *
+   * @todo Properly inject this service in Drupal 9.0.x.
+   */
+  protected function getStreamWrapperManager() {
+    return \Drupal::service('stream_wrapper_manager');
   }
 
 }

@@ -11,6 +11,8 @@
 
 namespace Symfony\Component\Console\Formatter;
 
+use Symfony\Component\Console\Exception\InvalidArgumentException;
+
 /**
  * Formatter class for console output.
  *
@@ -31,7 +33,29 @@ class OutputFormatter implements OutputFormatterInterface
      */
     public static function escape($text)
     {
-        return preg_replace('/([^\\\\]?)</', '$1\\<', $text);
+        $text = preg_replace('/([^\\\\]?)</', '$1\\<', $text);
+
+        return self::escapeTrailingBackslash($text);
+    }
+
+    /**
+     * Escapes trailing "\" in given text.
+     *
+     * @param string $text Text to escape
+     *
+     * @return string Escaped text
+     *
+     * @internal
+     */
+    public static function escapeTrailingBackslash($text)
+    {
+        if ('\\' === substr($text, -1)) {
+            $len = strlen($text);
+            $text = rtrim($text, '\\');
+            $text .= str_repeat('<<', $len - strlen($text));
+        }
+
+        return $text;
     }
 
     /**
@@ -106,12 +130,12 @@ class OutputFormatter implements OutputFormatterInterface
      *
      * @return OutputFormatterStyleInterface
      *
-     * @throws \InvalidArgumentException When style isn't defined
+     * @throws InvalidArgumentException When style isn't defined
      */
     public function getStyle($name)
     {
         if (!$this->hasStyle($name)) {
-            throw new \InvalidArgumentException(sprintf('Undefined style: %s', $name));
+            throw new InvalidArgumentException(sprintf('Undefined style: %s', $name));
         }
 
         return $this->styles[strtolower($name)];
@@ -129,7 +153,7 @@ class OutputFormatter implements OutputFormatterInterface
         $message = (string) $message;
         $offset = 0;
         $output = '';
-        $tagRegex = '[a-z][a-z0-9_=;-]*';
+        $tagRegex = '[a-z][a-z0-9_=;-]*+';
         preg_match_all("#<(($tagRegex) | /($tagRegex)?)>#ix", $message, $matches, PREG_OFFSET_CAPTURE);
         foreach ($matches[0] as $i => $match) {
             $pos = $match[1];
@@ -164,6 +188,10 @@ class OutputFormatter implements OutputFormatterInterface
 
         $output .= $this->applyCurrentStyle(substr($message, $offset));
 
+        if (false !== strpos($output, '<<')) {
+            return strtr($output, array('\\<' => '<', '<<' => '\\'));
+        }
+
         return str_replace('\\<', '<', $output);
     }
 
@@ -180,7 +208,7 @@ class OutputFormatter implements OutputFormatterInterface
      *
      * @param string $string
      *
-     * @return OutputFormatterStyle|bool false if string is not format string
+     * @return OutputFormatterStyle|false false if string is not format string
      */
     private function createStyleFromString($string)
     {

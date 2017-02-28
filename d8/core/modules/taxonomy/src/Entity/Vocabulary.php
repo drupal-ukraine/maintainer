@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\taxonomy\Entity\Vocabulary.
- */
-
 namespace Drupal\taxonomy\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBundleBase;
@@ -78,18 +73,18 @@ class Vocabulary extends ConfigEntityBundleBase implements VocabularyInterface {
    * The type of hierarchy allowed within the vocabulary.
    *
    * Possible values:
-   * - TAXONOMY_HIERARCHY_DISABLED: No parents.
-   * - TAXONOMY_HIERARCHY_SINGLE: Single parent.
-   * - TAXONOMY_HIERARCHY_MULTIPLE: Multiple parents.
+   * - VocabularyInterface::HIERARCHY_DISABLED: No parents.
+   * - VocabularyInterface::HIERARCHY_SINGLE: Single parent.
+   * - VocabularyInterface::HIERARCHY_MULTIPL: Multiple parents.
    *
-   * @var integer
+   * @var int
    */
-  protected $hierarchy = TAXONOMY_HIERARCHY_DISABLED;
+  protected $hierarchy = VocabularyInterface::HIERARCHY_DISABLED;
 
   /**
    * The weight of this vocabulary in relation to other vocabularies.
    *
-   * @var integer
+   * @var int
    */
   protected $weight = 0;
 

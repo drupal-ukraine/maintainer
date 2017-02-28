@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\options\Plugin\Field\FieldType\ListItemBase.
- */
-
 namespace Drupal\options\Plugin\Field\FieldType;
 
 use Drupal\Core\Field\AllowedTagsXssTrait;
@@ -70,11 +65,11 @@ abstract class ListItemBase extends FieldItemBase implements OptionsProviderInte
   /**
    * {@inheritdoc}
    */
-   public static function generateSampleValue(FieldDefinitionInterface $field_definition) {
-     $allowed_options = options_allowed_values($field_definition->getFieldStorageDefinition());
-     $values['value'] = array_rand($allowed_options);
-     return $values;
-   }
+  public static function generateSampleValue(FieldDefinitionInterface $field_definition) {
+    $allowed_options = options_allowed_values($field_definition->getFieldStorageDefinition());
+    $values['value'] = array_rand($allowed_options);
+    return $values;
+  }
 
   /**
    * {@inheritdoc}
@@ -173,7 +168,7 @@ abstract class ListItemBase extends FieldItemBase implements OptionsProviderInte
    * @return array|null
    *   The array of extracted key/value pairs, or NULL if the string is invalid.
    *
-   * @see \Drupal\options\Plugin\Field\FieldType\ListTextItem::allowedValuesString()
+   * @see \Drupal\options\Plugin\Field\FieldType\ListItemBase::allowedValuesString()
    */
   protected static function extractAllowedValues($string, $has_data) {
     $values = array();
@@ -252,7 +247,7 @@ abstract class ListItemBase extends FieldItemBase implements OptionsProviderInte
   }
 
   /**
-   * @inheritdoc.
+   * {@inheritdoc}
    */
   public static function storageSettingsToConfigData(array $settings) {
     if (isset($settings['allowed_values'])) {
@@ -262,7 +257,7 @@ abstract class ListItemBase extends FieldItemBase implements OptionsProviderInte
   }
 
   /**
-   * @inheritdoc.
+   * {@inheritdoc}
    */
   public static function storageSettingsFromConfigData(array $settings) {
     if (isset($settings['allowed_values'])) {
@@ -282,7 +277,7 @@ abstract class ListItemBase extends FieldItemBase implements OptionsProviderInte
    *   Allowed values were the array key is the 'value' value, the value is
    *   the 'label' value.
    *
-   * @see Drupal\options\Plugin\Field\FieldType\ListItemBase::structureAllowedValues()
+   * @see \Drupal\options\Plugin\Field\FieldType\ListItemBase::structureAllowedValues()
    */
   protected static function simplifyAllowedValues(array $structured_values) {
     $values = array();
@@ -307,7 +302,7 @@ abstract class ListItemBase extends FieldItemBase implements OptionsProviderInte
    *   Array of items with a 'value' and 'label' key each for the allowed
    *   values.
    *
-   * @see Drupal\options\Plugin\Field\FieldType\ListItemBase::simplifyAllowedValues()
+   * @see \Drupal\options\Plugin\Field\FieldType\ListItemBase::simplifyAllowedValues()
    */
   protected static function structureAllowedValues(array $values) {
     $structured_values = array();

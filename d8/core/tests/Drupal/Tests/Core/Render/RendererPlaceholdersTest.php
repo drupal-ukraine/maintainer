@@ -7,13 +7,16 @@
 
 namespace Drupal\Tests\Core\Render;
 
+use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\Html;
-use Drupal\Core\Render\Element;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Render\Markup;
+use Drupal\Core\Render\RenderContext;
 
 /**
  * @coversDefaultClass \Drupal\Core\Render\Renderer
+ * @covers \Drupal\Core\Render\RenderCache
+ * @covers \Drupal\Core\Render\PlaceholderingRenderCache
  * @group Render
  */
 class RendererPlaceholdersTest extends RendererTestBase {
@@ -69,7 +72,7 @@ class RendererPlaceholdersTest extends RendererTestBase {
       if (is_array($cache_keys)) {
         $token_render_array['#cache']['keys'] = $cache_keys;
       }
-      $token = hash('crc32b', serialize($token_render_array));
+      $token = Crypt::hashBase64(serialize($token_render_array));
       // \Drupal\Core\Render\Markup::create() is necessary as the render
       // system would mangle this markup. As this is exactly what happens at
       // runtime this is a valid use-case.
@@ -543,7 +546,7 @@ class RendererPlaceholdersTest extends RendererTestBase {
   }
 
   /**
-   * @param FALSE|array $cid_parts
+   * @param false|array $cid_parts
    * @param array $expected_data
    *   FALSE if no render cache item is expected, a render array with the
    *   expected values if a render cache item is expected.
@@ -616,7 +619,7 @@ class RendererPlaceholdersTest extends RendererTestBase {
 
     $this->setUpRequest('GET');
 
-    $token = hash('crc32b', serialize($expected_placeholder_render_array));
+    $token = Crypt::hashBase64(serialize($expected_placeholder_render_array));
     $placeholder_callback = $expected_placeholder_render_array['#lazy_builder'][0];
     $expected_placeholder_markup = '<drupal-render-placeholder callback="' . $placeholder_callback . '" arguments="0=' . $args[0] . '" token="' . $token . '"></drupal-render-placeholder>';
     $this->assertSame($expected_placeholder_markup, Html::normalize($expected_placeholder_markup), 'Placeholder unaltered by Html::normalize() which is used by FilterHtmlCorrector.');
@@ -780,6 +783,40 @@ class RendererPlaceholdersTest extends RendererTestBase {
     // Even when the child element's placeholder is cacheable, it should not
     // generate a render cache item.
     $this->assertPlaceholderRenderCache(FALSE, [], []);
+  }
+
+  /**
+   * @covers ::render
+   * @covers ::doRender
+   * @covers \Drupal\Core\Render\RenderCache::get
+   * @covers \Drupal\Core\Render\PlaceholderingRenderCache::get
+   * @covers \Drupal\Core\Render\PlaceholderingRenderCache::set
+   * @covers ::replacePlaceholders
+   *
+   * @dataProvider providerPlaceholders
+   */
+  public function testPlaceholderingDisabledForPostRequests($test_element, $args) {
+    $this->setUpUnusedCache();
+    $this->setUpRequest('POST');
+
+    $element = $test_element;
+
+    // Render without replacing placeholders, to allow this test to see which
+    // #attached[placeholders] there are, if any.
+    $this->renderer->executeInRenderContext(new RenderContext(), function () use (&$element) {
+      return $this->renderer->render($element);
+    });
+    // Only test cases where the placeholders have been specified manually are
+    // allowed to have placeholders. This means that of the different situations
+    // listed in providerPlaceholders(), only type B can have attached
+    // placeholders. Everything else, whether:
+    // 1. manual placeholdering
+    // 2. automatic placeholdering via already-present cacheability metadata
+    // 3. automatic placeholdering via bubbled cacheability metadata
+    // All three of those should NOT result in placeholders.
+    if (!isset($test_element['#attached']['placeholders'])) {
+      $this->assertFalse(isset($element['#attached']['placeholders']), 'No placeholders created.');
+    }
   }
 
   /**
@@ -999,7 +1036,7 @@ HTML;
     $dom = Html::load($cached_element['#markup']);
     $xpath = new \DOMXPath($dom);
     $parent = $xpath->query('//details/summary[text()="Parent"]')->length;
-    $child =  $xpath->query('//details/div[@class="details-wrapper"]/details/summary[text()="Child"]')->length;
+    $child = $xpath->query('//details/div[@class="details-wrapper"]/details/summary[text()="Child"]')->length;
     $subchild = $xpath->query('//details/div[@class="details-wrapper"]/details/div[@class="details-wrapper" and text()="Subchild"]')->length;
     $this->assertTrue($parent && $child && $subchild, 'The correct data is cached: the stored #markup is not affected by placeholder #lazy_builder callbacks.');
 
@@ -1111,7 +1148,7 @@ class RecursivePlaceholdersTest {
    * #lazy_builder callback; bubbles another placeholder.
    *
    * @param string $animal
-   *  An animal.
+   *   An animal.
    *
    * @return array
    *   A renderable array.

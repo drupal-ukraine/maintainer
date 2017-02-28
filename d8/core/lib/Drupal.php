@@ -63,8 +63,8 @@ use Drupal\Core\Url;
  *   class StuffDoingClass implements StuffDoingInterface {
  *     protected $lockBackend;
  *
- *     public function __construct(LockBackendInterface $lockBackend) {
- *       $this->lockBackend = $lockBackend;
+ *     public function __construct(LockBackendInterface $lock_backend) {
+ *       $this->lockBackend = $lock_backend;
  *     }
  *
  *     public function doStuff() {
@@ -81,7 +81,7 @@ class Drupal {
   /**
    * The current system version.
    */
-  const VERSION = '8.0.1';
+  const VERSION = '8.3.0-beta1';
 
   /**
    * Core API compatibility.
@@ -179,6 +179,16 @@ class Drupal {
    */
   public static function root() {
     return static::getContainer()->get('app.root');
+  }
+
+  /**
+   * Gets the active install profile.
+   *
+   * @return string|null
+   *   The name of the active install profile.
+   */
+  public static function installProfile() {
+    return static::getContainer()->getParameter('install_profile');
   }
 
   /**
@@ -297,6 +307,23 @@ class Drupal {
    */
   public static function cache($bin = 'default') {
     return static::getContainer()->get('cache.' . $bin);
+  }
+
+  /**
+   * Retrieves the class resolver.
+   *
+   * This is to be used in procedural code such as module files to instantiate
+   * an object of a class that implements
+   * \Drupal\Core\DependencyInjection\ContainerInjectionInterface.
+   *
+   * One common usecase is to provide a class which contains the actual code
+   * of a hook implementation, without having to create a service.
+   *
+   * @return \Drupal\Core\DependencyInjection\ClassResolverInterface
+   *   The class resolver.
+   */
+  public static function classResolver() {
+    return static::getContainer()->get('class_resolver');
   }
 
   /**
@@ -423,34 +450,34 @@ class Drupal {
    * Returns the entity query object for this entity type.
    *
    * @param string $entity_type
-   *   The entity type, e.g. node, for which the query object should be
+   *   The entity type (for example, node) for which the query object should be
    *   returned.
    * @param string $conjunction
-   *   AND if all conditions in the query need to apply, OR if any of them is
-   *   enough. Optional, defaults to AND.
+   *   (optional) Either 'AND' if all conditions in the query need to apply, or
+   *   'OR' if any of them is sufficient. Defaults to 'AND'.
    *
    * @return \Drupal\Core\Entity\Query\QueryInterface
    *   The query object that can query the given entity type.
    */
   public static function entityQuery($entity_type, $conjunction = 'AND') {
-    return static::getContainer()->get('entity.query')->get($entity_type, $conjunction);
+    return static::entityTypeManager()->getStorage($entity_type)->getQuery($conjunction);
   }
 
   /**
    * Returns the entity query aggregate object for this entity type.
    *
    * @param string $entity_type
-   *   The entity type, e.g. node, for which the query object should be
+   *   The entity type (for example, node) for which the query object should be
    *   returned.
    * @param string $conjunction
-   *   AND if all conditions in the query need to apply, OR if any of them is
-   *   enough. Optional, defaults to AND.
+   *   (optional) Either 'AND' if all conditions in the query need to apply, or
+   *   'OR' if any of them is sufficient. Defaults to 'AND'.
    *
    * @return \Drupal\Core\Entity\Query\QueryAggregateInterface
    *   The query object that can query the given entity type.
    */
   public static function entityQueryAggregate($entity_type, $conjunction = 'AND') {
-    return static::getContainer()->get('entity.query')->getAggregate($entity_type, $conjunction);
+    return static::entityTypeManager()->getStorage($entity_type)->getAggregateQuery($conjunction);
   }
 
   /**
@@ -556,8 +583,7 @@ class Drupal {
    * Renders a link with a given link text and Url object.
    *
    * This method is a convenience wrapper for the link generator service's
-   * generate() method. For detailed documentation, see
-   * \Drupal\Core\Routing\LinkGeneratorInterface::generate().
+   * generate() method.
    *
    * @param string $text
    *   The link text for the anchor tag.
@@ -719,6 +745,16 @@ class Drupal {
    */
   public static function entityDefinitionUpdateManager() {
     return static::getContainer()->get('entity.definition_update_manager');
+  }
+
+  /**
+   * Returns the time service.
+   *
+   * @return \Drupal\Component\Datetime\TimeInterface
+   *   The time service.
+   */
+  public static function time() {
+    return static::getContainer()->get('datetime.time');
   }
 
 }

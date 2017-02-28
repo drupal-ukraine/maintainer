@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\aggregator\Form\OpmlFeedAdd.
- */
-
 namespace Drupal\aggregator\Form;
 
 use Drupal\aggregator\FeedStorageInterface;
@@ -104,8 +99,8 @@ class OpmlFeedAdd extends FormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     // If both fields are empty or filled, cancel.
-    $file_upload = $this->getRequest()->files->get('files[upload]', NULL, TRUE);
-    if ($form_state->isValueEmpty('remote') == empty($file_upload)) {
+    $all_files = $this->getRequest()->files->get('files', []);
+    if ($form_state->isValueEmpty('remote') == empty($all_files['upload'])) {
       $form_state->setErrorByName('remote', $this->t('<em>Either</em> upload a file or enter a URL.'));
     }
   }
@@ -195,7 +190,8 @@ class OpmlFeedAdd extends FormBase {
    */
   protected function parseOpml($opml) {
     $feeds = array();
-    $xml_parser = drupal_xml_parser_create($opml);
+    $xml_parser = xml_parser_create();
+    xml_parser_set_option($xml_parser, XML_OPTION_TARGET_ENCODING, 'utf-8');
     if (xml_parse_into_struct($xml_parser, $opml, $values)) {
       foreach ($values as $entry) {
         if ($entry['tag'] == 'OUTLINE' && isset($entry['attributes'])) {

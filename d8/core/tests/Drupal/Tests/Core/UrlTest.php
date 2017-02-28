@@ -154,7 +154,7 @@ class UrlTest extends UnitTestCase {
     return $urls;
   }
 
-   /**
+  /**
    * This constraint checks whether a Request object has the right path.
    *
    * @param string $path
@@ -336,6 +336,18 @@ class UrlTest extends UnitTestCase {
   }
 
   /**
+   * Tests the getUri() and isExternal() methods for protocol-relative URLs.
+   *
+   * @covers ::getUri
+   * @covers ::isExternal
+   */
+  public function testGetUriForProtocolRelativeUrl() {
+    $url = Url::fromUri('//example.com/test');
+    $this->assertEquals('//example.com/test', $url->getUri());
+    $this->assertTrue($url->isExternal());
+  }
+
+  /**
    * Tests the getInternalPath method().
    *
    * @param \Drupal\Core\Url[] $urls
@@ -457,6 +469,31 @@ class UrlTest extends UnitTestCase {
   }
 
   /**
+   * Tests the setOptions() method.
+   *
+   * @covers ::setOptions
+   */
+  public function testSetOptions() {
+    $url = Url::fromRoute('test_route', []);
+    $this->assertEquals([], $url->getOptions());
+    $url->setOptions(['foo' => 'bar']);
+    $this->assertEquals(['foo' => 'bar'], $url->getOptions());
+    $url->setOptions([]);
+    $this->assertEquals([], $url->getOptions());
+  }
+
+  /**
+   * Tests the mergeOptions() method.
+   *
+   * @covers ::mergeOptions
+   */
+  public function testMergeOptions() {
+    $url = Url::fromRoute('test_route', [], ['foo' => 'bar', 'bar' => ['key' => 'value']]);
+    $url->mergeOptions(['bar' => ['key' => 'value1', 'key2' => 'value2']]);
+    $this->assertEquals(['foo' => 'bar', 'bar' => ['key' => 'value1', 'key2' => 'value2']], $url->getOptions());
+  }
+
+  /**
    * Tests the access() method for routed URLs.
    *
    * @param bool $access
@@ -512,7 +549,7 @@ class UrlTest extends UnitTestCase {
     $route_match = new RouteMatch('test_route', $route, ['foo' => (object) [1]], ['foo' => 1]);
     $url = Url::fromRouteMatch($route_match);
     $this->assertSame('test_route', $url->getRouteName());
-    $this->assertEquals(['foo' => '1'] , $url->getRouteParameters());
+    $this->assertEquals(['foo' => '1'], $url->getRouteParameters());
   }
 
   /**
@@ -749,6 +786,16 @@ class UrlTest extends UnitTestCase {
   }
 
   /**
+   * Tests the fromUri() method with a base: URI starting with a number.
+   *
+   * @covers ::fromUri
+   */
+  public function testFromUriNumber() {
+    $url = Url::fromUri('base:2015/10/06');
+    $this->assertSame($url->toUriString(), 'base:/2015/10/06');
+  }
+
+  /**
    * Tests the toUriString() method with route: URIs.
    *
    * @covers ::toUriString
@@ -789,7 +836,7 @@ class UrlTest extends UnitTestCase {
    * Creates a mock access manager for the access tests.
    *
    * @param bool $access
-   * @param \Drupal\Core\Session\AccountInterface|NULL $account
+   * @param \Drupal\Core\Session\AccountInterface|null $account
    *
    * @return \Drupal\Core\Access\AccessManagerInterface|\PHPUnit_Framework_MockObject_MockObject
    */
@@ -824,6 +871,5 @@ class TestUrl extends Url {
   public function setAccessManager(AccessManagerInterface $access_manager) {
     $this->accessManager = $access_manager;
   }
-
 
 }

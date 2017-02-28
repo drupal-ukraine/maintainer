@@ -1,13 +1,9 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\field_ui\Tests\ManageDisplayTest.
- */
-
 namespace Drupal\field_ui\Tests;
 
 use Drupal\Component\Utility\Unicode;
+use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Entity\Entity\EntityViewDisplay;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Language\LanguageInterface;
@@ -99,12 +95,31 @@ class ManageDisplayTest extends WebTestBase {
       'field_test_multiple',
       'field_test_with_prepare_view',
       'field_test_applicable',
-      'hidden',
     );
     $this->assertEqual($options, $expected_options, 'The expected formatter ordering is respected.');
 
+    // Ensure that fields can be hidden directly by changing the region.
+    $this->drupalGet($manage_display);
+    $this->assertFieldByName('fields[field_test][region]', 'content');
+    $edit = ['fields[field_test][region]' => 'hidden'];
+    $this->drupalPostForm($manage_display, $edit, t('Save'));
+    $this->assertFieldByName('fields[field_test][region]', 'hidden');
+    $display = EntityViewDisplay::load("node.{$this->type}.default");
+    $this->assertNull($display->getComponent('field_test'));
+
+    // Restore the field to the content region.
+    $edit = [
+      'fields[field_test][type]' => 'field_test_default',
+      'fields[field_test][region]' => 'content',
+    ];
+    $this->drupalPostForm($manage_display, $edit, t('Save'));
+
     // Change the formatter and check that the summary is updated.
-    $edit = array('fields[field_test][type]' => 'field_test_multiple', 'refresh_rows' => 'field_test');
+    $edit = array(
+      'fields[field_test][type]' => 'field_test_multiple',
+      'fields[field_test][region]' => 'content',
+      'refresh_rows' => 'field_test'
+    );
     $this->drupalPostAjaxForm(NULL, $edit, array('op' => t('Refresh')));
     $format = 'field_test_multiple';
     $default_settings = \Drupal::service('plugin.manager.field.formatter')->getDefaultSettings($format);
@@ -140,7 +155,10 @@ class ManageDisplayTest extends WebTestBase {
     $this->drupalPostForm(NULL, array(), t('Save'));
 
     \Drupal::entityManager()->clearCachedFieldDefinitions();
-    $display = entity_load('entity_view_display', 'node.' . $this->type . '.default', TRUE);
+    $id = 'node.' . $this->type . '.default';
+    $storage = $this->container->get('entity_type.manager')->getStorage('entity_view_display');
+    $storage->resetCache([$id]);
+    $display = $storage->load($id);
     $this->assertEqual($display->getRenderer('field_test')->getThirdPartySetting('field_third_party_test', 'field_test_field_formatter_third_party_settings_form'), 'foo');
     $this->assertTrue(in_array('field_third_party_test', $display->calculateDependencies()->getDependencies()['module']), 'The display has a dependency on field_third_party_test module.');
 
@@ -149,7 +167,10 @@ class ManageDisplayTest extends WebTestBase {
     $this->assertFieldByName($fieldname, '');
 
     // Test the empty setting formatter.
-    $edit = array('fields[field_test][type]' => 'field_empty_setting');
+    $edit = array(
+      'fields[field_test][type]' => 'field_empty_setting',
+      'fields[field_test][region]' => 'content',
+      );
     $this->drupalPostForm(NULL, $edit, t('Save'));
     $this->assertNoText('Default empty setting now has a value.');
     $this->assertFieldById('edit-fields-field-test-settings-edit');
@@ -161,7 +182,11 @@ class ManageDisplayTest extends WebTestBase {
 
     // Test the settings form behavior. An edit button should be present since
     // there are third party settings to configure.
-    $edit = array('fields[field_test][type]' => 'field_no_settings', 'refresh_rows' => 'field_test');
+    $edit = array(
+      'fields[field_test][type]' => 'field_no_settings',
+      'fields[field_test][region]' => 'content',
+      'refresh_rows' => 'field_test',
+    );
     $this->drupalPostAjaxForm(NULL, $edit, array('op' => t('Refresh')));
     $this->assertFieldByName('field_test_settings_edit');
 
@@ -227,12 +252,15 @@ class ManageDisplayTest extends WebTestBase {
     $expected_options = array (
       'test_field_widget',
       'test_field_widget_multiple',
-      'hidden',
     );
     $this->assertEqual($options, $expected_options, 'The expected widget ordering is respected.');
 
     // Change the widget and check that the summary is updated.
-    $edit = array('fields[field_test][type]' => 'test_field_widget_multiple', 'refresh_rows' => 'field_test');
+    $edit = array(
+      'fields[field_test][type]' => 'test_field_widget_multiple',
+      'fields[field_test][region]' => 'content',
+      'refresh_rows' => 'field_test',
+    );
     $this->drupalPostAjaxForm(NULL, $edit, array('op' => t('Refresh')));
     $widget_type = 'test_field_widget_multiple';
     $default_settings = \Drupal::service('plugin.manager.field.widget')->getDefaultSettings($widget_type);
@@ -266,7 +294,9 @@ class ManageDisplayTest extends WebTestBase {
     // Save the form to save the third party settings.
     $this->drupalPostForm(NULL, array(), t('Save'));
     \Drupal::entityManager()->clearCachedFieldDefinitions();
-    $display = entity_load('entity_form_display', 'node.' . $this->type . '.default', TRUE);
+    $storage = $this->container->get('entity_type.manager')->getStorage('entity_form_display');
+    $storage->resetCache(array('node.' . $this->type . '.default'));
+    $display = $storage->load('node.' . $this->type . '.default');
     $this->assertEqual($display->getRenderer('field_test')->getThirdPartySetting('field_third_party_test', 'field_test_widget_third_party_settings_form'), 'foo');
     $this->assertTrue(in_array('field_third_party_test', $display->calculateDependencies()->getDependencies()['module']), 'Form display does not have a dependency on field_third_party_test module.');
 
@@ -282,8 +312,16 @@ class ManageDisplayTest extends WebTestBase {
     $this->drupalGet($manage_display);
 
     // Checks if the select elements contain the specified options.
-    $this->assertFieldSelectOptions('fields[field_test][type]', array('test_field_widget', 'test_field_widget_multiple', 'hidden'));
-    $this->assertFieldSelectOptions('fields[field_onewidgetfield][type]', array('test_field_widget', 'hidden'));
+    $this->assertFieldSelectOptions('fields[field_test][type]', array('test_field_widget', 'test_field_widget_multiple'));
+    $this->assertFieldSelectOptions('fields[field_onewidgetfield][type]', array('test_field_widget'));
+
+    // Ensure that fields can be hidden directly by changing the region.
+    $this->assertFieldByName('fields[field_test][region]', 'content');
+    $edit = ['fields[field_test][region]' => 'hidden'];
+    $this->drupalPostForm(NULL, $edit, t('Save'));
+    $this->assertFieldByName('fields[field_test][region]', 'hidden');
+    $display = EntityFormDisplay::load("node.{$this->type}.default");
+    $this->assertNull($display->getComponent('field_test'));
   }
 
   /**
@@ -309,7 +347,7 @@ class ManageDisplayTest extends WebTestBase {
     $field_test_with_prepare_view_settings = $formatter_plugin_manager->getDefaultSettings('field_test_with_prepare_view');
     $output = array(
       'field_test_default' => $field_test_default_settings['test_formatter_setting'] . '|' . $value,
-      'field_test_with_prepare_view' => $field_test_with_prepare_view_settings['test_formatter_setting_additional'] . '|' . $value. '|' . ($value + 1),
+      'field_test_with_prepare_view' => $field_test_with_prepare_view_settings['test_formatter_setting_additional'] . '|' . $value . '|' . ($value + 1),
     );
 
     // Check that the field is displayed with the default formatter in 'rss'
@@ -321,6 +359,7 @@ class ManageDisplayTest extends WebTestBase {
     // accordingly in 'rss' mode.
     $edit = array(
       'fields[field_test][type]' => 'field_test_with_prepare_view',
+      'fields[field_test][region]' => 'content',
     );
     $this->drupalPostForm('admin/structure/types/manage/' . $this->type . '/display', $edit, t('Save'));
     $this->assertNodeViewText($node, 'rss', $output['field_test_with_prepare_view'], "The field is displayed as expected in view modes that use 'default' settings.");
@@ -335,7 +374,7 @@ class ManageDisplayTest extends WebTestBase {
     // Set the field to 'hidden' in the view mode, check that the field is
     // hidden.
     $edit = array(
-      'fields[field_test][type]' => 'hidden',
+      'fields[field_test][region]' => 'hidden',
     );
     $this->drupalPostForm('admin/structure/types/manage/' . $this->type . '/display/rss', $edit, t('Save'));
     $this->assertNodeViewNoText($node, 'rss', $value, "The field is hidden in 'rss' mode.");
@@ -378,7 +417,7 @@ class ManageDisplayTest extends WebTestBase {
     // Check that the field appears as 'hidden' on the 'Manage display' page
     // for the 'teaser' mode.
     $this->drupalGet('admin/structure/types/manage/' . $this->type . '/display/teaser');
-    $this->assertFieldByName('fields[field_test][type]', 'hidden', 'The field is displayed as \'hidden \'.');
+    $this->assertFieldByName('fields[field_test][region]', 'hidden', 'The field is displayed as \'hidden \'.');
   }
 
   /**
@@ -475,7 +514,7 @@ class ManageDisplayTest extends WebTestBase {
     $clone = clone $node;
     $element = node_view($clone, $view_mode);
     $output = \Drupal::service('renderer')->renderRoot($element);
-    $this->verbose(t('Rendered node - view mode: @view_mode', array('@view_mode' => $view_mode)) . '<hr />'. $output);
+    $this->verbose(t('Rendered node - view mode: @view_mode', array('@view_mode' => $view_mode)) . '<hr />' . $output);
 
     // Assign content so that WebTestBase functions can be used.
     $this->setRawContent($output);

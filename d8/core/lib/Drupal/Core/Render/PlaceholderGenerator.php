@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\PlaceholderGenerator.
- */
-
 namespace Drupal\Core\Render;
 
+use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\UrlHelper;
 use Drupal\Core\Cache\Cache;
@@ -49,19 +45,19 @@ class PlaceholderGenerator implements PlaceholderGeneratorInterface {
    * {@inheritdoc}
    */
   public function shouldAutomaticallyPlaceholder(array $element) {
+    // Auto-placeholder if the max-age, cache context or cache tag is specified
+    // in the auto-placeholder conditions in the 'renderer.config' container
+    // parameter.
     $conditions = $this->rendererConfig['auto_placeholder_conditions'];
 
-    // Auto-placeholder if max-age is at or below the configured threshold.
     if (isset($element['#cache']['max-age']) && $element['#cache']['max-age'] !== Cache::PERMANENT && $element['#cache']['max-age'] <= $conditions['max-age']) {
       return TRUE;
     }
 
-    // Auto-placeholder if a high-cardinality cache context is set.
     if (isset($element['#cache']['contexts']) && array_intersect($element['#cache']['contexts'], $conditions['contexts'])) {
       return TRUE;
     }
 
-    // Auto-placeholder if a high-invalidation frequency cache tag is set.
     if (isset($element['#cache']['tags']) && array_intersect($element['#cache']['tags'], $conditions['tags'])) {
       return TRUE;
     }
@@ -89,7 +85,7 @@ class PlaceholderGenerator implements PlaceholderGeneratorInterface {
     // debugging.
     $callback = $placeholder_render_array['#lazy_builder'][0];
     $arguments = UrlHelper::buildQuery($placeholder_render_array['#lazy_builder'][1]);
-    $token = hash('crc32b', serialize($placeholder_render_array));
+    $token = Crypt::hashBase64(serialize($placeholder_render_array));
     $placeholder_markup = '<drupal-render-placeholder callback="' . Html::escape($callback) . '" arguments="' . Html::escape($arguments) . '" token="' . Html::escape($token) . '"></drupal-render-placeholder>';
 
     // Build the placeholder element to return.

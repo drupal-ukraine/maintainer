@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\block_content\BlockContentViewBuilder.
- */
-
 namespace Drupal\block_content;
 
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
@@ -12,16 +7,9 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityViewBuilder;
 
 /**
- * Render controller for custom blocks.
+ * View builder handler for custom blocks.
  */
 class BlockContentViewBuilder extends EntityViewBuilder {
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(EntityInterface $entity, $view_mode = 'full', $langcode = NULL) {
-    return $this->viewMultiple(array($entity), $view_mode, $langcode)[0];
-  }
 
   /**
    * {@inheritdoc}
@@ -31,7 +19,9 @@ class BlockContentViewBuilder extends EntityViewBuilder {
     // Apply the buildMultiple() #pre_render callback immediately, to make
     // bubbling of attributes and contextual links to the actual block work.
     // @see \Drupal\block\BlockViewBuilder::buildBlock()
-    unset($build_list['#pre_render'][0]);
+    foreach ($entities as $key => $entity) {
+      unset($build_list[$key]['#pre_render'][0]);
+    }
     return $this->buildMultiple($build_list);
   }
 

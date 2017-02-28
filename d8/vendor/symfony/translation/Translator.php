@@ -159,7 +159,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface
      *
      * @throws \InvalidArgumentException If a locale contains invalid characters
      *
-     * @deprecated since version 2.3, to be removed in 3.0. Use setFallbackLocales() instead.
+     * @deprecated since version 2.3, to be removed in 3.0. Use setFallbackLocales() instead
      */
     public function setFallbackLocale($locales)
     {
@@ -267,9 +267,13 @@ class Translator implements TranslatorInterface, TranslatorBagInterface
      * @param string|null $locale Locale of translations, by default is current locale
      *
      * @return array[array] indexed by catalog
+     *
+     * @deprecated since version 2.8, to be removed in 3.0. Use TranslatorBagInterface::getCatalogue() method instead.
      */
     public function getMessages($locale = null)
     {
+        @trigger_error('The '.__METHOD__.' method is deprecated since version 2.8 and will be removed in 3.0. Use TranslatorBagInterface::getCatalogue() method instead.', E_USER_DEPRECATED);
+
         $catalogue = $this->getCatalogue($locale);
         $messages = $catalogue->all();
         while ($catalogue = $catalogue->getFallbackCatalogue()) {
@@ -376,9 +380,9 @@ EOF
             $fallbackSuffix = ucfirst(preg_replace($replacementPattern, '_', $fallback));
             $currentSuffix = ucfirst(preg_replace($replacementPattern, '_', $current));
 
-            $fallbackContent .= sprintf(<<<EOF
-\$catalogue%s = new MessageCatalogue('%s', %s);
-\$catalogue%s->addFallbackCatalogue(\$catalogue%s);
+            $fallbackContent .= sprintf(<<<'EOF'
+$catalogue%s = new MessageCatalogue('%s', %s);
+$catalogue%s->addFallbackCatalogue($catalogue%s);
 
 EOF
                 ,
@@ -420,10 +424,13 @@ EOF
 
         foreach ($this->computeFallbackLocales($locale) as $fallback) {
             if (!isset($this->catalogues[$fallback])) {
-                $this->doLoadCatalogue($fallback);
+                $this->loadCatalogue($fallback);
             }
 
             $fallbackCatalogue = new MessageCatalogue($fallback, $this->catalogues[$fallback]->all());
+            foreach ($this->catalogues[$fallback]->getResources() as $resource) {
+                $fallbackCatalogue->addResource($resource);
+            }
             $current->addFallbackCatalogue($fallbackCatalogue);
             $current = $fallbackCatalogue;
         }

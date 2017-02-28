@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\menu_link_content\Entity\MenuLinkContent.
- */
-
 namespace Drupal\menu_link_content\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
@@ -122,7 +117,9 @@ class MenuLinkContent extends ContentEntityBase implements MenuLinkContentInterf
    * {@inheritdoc}
    */
   public function getParentId() {
-    return $this->get('parent')->value;
+    // Cast the parent ID to a string, only an empty string means no parent,
+    // NULL keeps the existing parent.
+    return (string) $this->get('parent')->value;
   }
 
   /**
@@ -200,15 +197,22 @@ class MenuLinkContent extends ContentEntityBase implements MenuLinkContentInterf
 
     // The menu link can just be updated if there is already an menu link entry
     // on both entity and menu link plugin level.
-    if ($update && $menu_link_manager->getDefinition($this->getPluginId())) {
+    $definition = $this->getPluginDefinition();
+    // Even when $update is FALSE, for top level links it is possible the link
+    // already is in the storage because of the getPluginDefinition() call
+    // above, see https://www.drupal.org/node/2605684#comment-10515450 for the
+    // call chain. Because of this the $update flag is ignored and only the
+    // existence of the definition (equals to being in the tree storage) is
+    // checked.
+    if ($menu_link_manager->getDefinition($this->getPluginId(), FALSE)) {
       // When the entity is saved via a plugin instance, we should not call
       // the menu tree manager to update the definition a second time.
       if (!$this->insidePlugin) {
-        $menu_link_manager->updateDefinition($this->getPluginId(), $this->getPluginDefinition(), FALSE);
+        $menu_link_manager->updateDefinition($this->getPluginId(), $definition, FALSE);
       }
     }
     else {
-      $menu_link_manager->addDefinition($this->getPluginId(), $this->getPluginDefinition());
+      $menu_link_manager->addDefinition($this->getPluginId(), $definition);
     }
   }
 
@@ -231,23 +235,20 @@ class MenuLinkContent extends ContentEntityBase implements MenuLinkContentInterf
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
-    $fields['id'] = BaseFieldDefinition::create('integer')
-      ->setLabel(t('Entity ID'))
-      ->setDescription(t('The entity ID for this menu link content entity.'))
-      ->setReadOnly(TRUE)
-      ->setSetting('unsigned', TRUE);
+    /** @var \Drupal\Core\Field\BaseFieldDefinition[] $fields */
+    $fields = parent::baseFieldDefinitions($entity_type);
 
-    $fields['uuid'] = BaseFieldDefinition::create('uuid')
-      ->setLabel(t('UUID'))
-      ->setDescription(t('The content menu link UUID.'))
-      ->setReadOnly(TRUE);
+    $fields['id']->setLabel(t('Entity ID'))
+      ->setDescription(t('The entity ID for this menu link content entity.'));
 
-    $fields['bundle'] = BaseFieldDefinition::create('string')
-      ->setLabel(t('Bundle'))
+    $fields['uuid']->setDescription(t('The content menu link UUID.'));
+
+    $fields['langcode']->setDescription(t('The menu link language code.'));
+
+    $fields['bundle']
       ->setDescription(t('The content menu link bundle.'))
       ->setSetting('max_length', EntityTypeInterface::BUNDLE_MAX_LENGTH)
-      ->setSetting('is_ascii', TRUE)
-      ->setReadOnly(TRUE);
+      ->setSetting('is_ascii', TRUE);
 
     $fields['title'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Menu link title'))
@@ -332,7 +333,7 @@ class MenuLinkContent extends ContentEntityBase implements MenuLinkContentInterf
         'type' => 'boolean',
         'weight' => 0,
       ))
-    ->setDisplayOptions('form', array(
+      ->setDisplayOptions('form', array(
         'settings' => array('display_label' => TRUE),
         'weight' => 0,
       ));
@@ -349,18 +350,6 @@ class MenuLinkContent extends ContentEntityBase implements MenuLinkContentInterf
       ->setDisplayOptions('form', array(
         'settings' => array('display_label' => TRUE),
         'weight' => -1,
-      ));
-
-    $fields['langcode'] = BaseFieldDefinition::create('language')
-      ->setLabel(t('Language'))
-      ->setDescription(t('The menu link language code.'))
-      ->setTranslatable(TRUE)
-      ->setDisplayOptions('view', array(
-        'type' => 'hidden',
-      ))
-      ->setDisplayOptions('form', array(
-        'type' => 'language_select',
-        'weight' => 2,
       ));
 
     $fields['parent'] = BaseFieldDefinition::create('string')

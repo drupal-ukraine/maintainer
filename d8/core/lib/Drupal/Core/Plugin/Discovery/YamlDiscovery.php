@@ -1,15 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Plugin\Discovery\YamlDiscovery.
- */
-
 namespace Drupal\Core\Plugin\Discovery;
 
 use Drupal\Component\Plugin\Discovery\DiscoveryInterface;
-use Drupal\Component\Discovery\YamlDiscovery as ComponentYamlDiscovery;
 use Drupal\Component\Plugin\Discovery\DiscoveryTrait;
+use Drupal\Core\Discovery\YamlDiscovery as CoreYamlDiscovery;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
@@ -30,7 +25,7 @@ class YamlDiscovery implements DiscoveryInterface {
   /**
    * YAML file discovery and parsing handler.
    *
-   * @var \Drupal\Component\Discovery\YamlDiscovery
+   * @var \Drupal\Core\Discovery\YamlDiscovery
    */
   protected $discovery;
 
@@ -47,13 +42,13 @@ class YamlDiscovery implements DiscoveryInterface {
    * Construct a YamlDiscovery object.
    *
    * @param string $name
-   *   The file name suffix to use for discovery. E.g. 'test' will become
-   *   'MODULE.test.yml'.
+   *   The file name suffix to use for discovery; for example, 'test' will
+   *   become 'MODULE.test.yml'.
    * @param array $directories
    *   An array of directories to scan.
    */
   function __construct($name, array $directories) {
-    $this->discovery = new ComponentYamlDiscovery($name, $directories);
+    $this->discovery = new CoreYamlDiscovery($name, $directories);
   }
 
   /**
@@ -106,4 +101,5 @@ class YamlDiscovery implements DiscoveryInterface {
 
     return $definitions;
   }
+
 }

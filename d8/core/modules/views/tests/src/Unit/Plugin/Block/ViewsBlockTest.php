@@ -1,20 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\views\Unit\Plugin\Block\ViewsBlockTest.
- */
-
-namespace Drupal\Tests\views\Unit\Plugin\Block {
+namespace Drupal\Tests\views\Unit\Plugin\Block;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Tests\UnitTestCase;
 use Drupal\views\Plugin\Block\ViewsBlock;
-
-// @todo Remove this once the constant got converted.
-if (!defined('BLOCK_LABEL_VISIBLE')) {
-  define('BLOCK_LABEL_VISIBLE', 'visible');
-}
 
 /**
  * @coversDefaultClass \Drupal\views\Plugin\block\ViewsBlock
@@ -121,6 +111,11 @@ class ViewsBlockTest extends UnitTestCase {
     $this->displayHandler->expects($this->any())
       ->method('getPluginId')
       ->willReturn('block');
+
+    $this->displayHandler->expects($this->any())
+      ->method('getHandlers')
+      ->willReturn([]);
+
     $this->executable->display_handler = $this->displayHandler;
 
     $this->storage = $this->getMockBuilder('Drupal\Core\Config\Entity\ConfigEntityStorage')
@@ -203,13 +198,11 @@ class ViewsBlockTest extends UnitTestCase {
 
 }
 
-}
+// @todo https://www.drupal.org/node/2571679 replace
+//   views_add_contextual_links().
+namespace Drupal\views\Plugin\Block;
 
-namespace {
-  // @todo https://www.drupal.org/node/2571679 replace
-  // views_add_contextual_links().
-  if (!function_exists('views_add_contextual_links')) {
-    function views_add_contextual_links() {
-    }
+if (!function_exists('views_add_contextual_links')) {
+  function views_add_contextual_links() {
   }
 }

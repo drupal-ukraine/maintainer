@@ -1,14 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\content_translation\ContentTranslationHandler.
- */
-
 namespace Drupal\content_translation;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Drupal\Core\Entity\EntityChangedInterface;
 use Drupal\Core\Entity\EntityHandlerInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
@@ -20,6 +16,7 @@ use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\user\Entity\User;
+use Drupal\user\EntityOwnerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -177,9 +174,9 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
   protected function hasAuthor() {
     // Check for field named uid, but only in case the entity implements the
     // EntityOwnerInterface. This helps to exclude cases, where the uid is
-    // defined as field name, but is not meant to be an owner field e.g. the
-    // User entity.
-    return $this->entityType->isSubclassOf('\Drupal\user\EntityOwnerInterface') && $this->checkFieldStorageDefinitionTranslatability('uid');
+    // defined as field name, but is not meant to be an owner field; for
+    // instance, the User entity.
+    return $this->entityType->entityClassImplements(EntityOwnerInterface::class) && $this->checkFieldStorageDefinitionTranslatability('uid');
   }
 
   /**
@@ -199,7 +196,7 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
    *   TRUE if metadata is natively supported, FALSE otherwise.
    */
   protected function hasChangedTime() {
-    return $this->entityType->isSubclassOf('Drupal\Core\Entity\EntityChangedInterface') && $this->checkFieldStorageDefinitionTranslatability('changed');
+    return $this->entityType->entityClassImplements(EntityChangedInterface::class) && $this->checkFieldStorageDefinitionTranslatability('changed');
   }
 
   /**
@@ -289,7 +286,7 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
     if (isset($languages[$form_langcode]) && ($has_translations || $new_translation)) {
       $title = $this->entityFormTitle($entity);
       // When editing the original values display just the entity label.
-      if ($form_langcode != $entity_langcode) {
+      if ($is_translation) {
         $t_args = array('%language' => $languages[$form_langcode]->getName(), '%title' => $entity->label(), '@title' => $title);
         $title = empty($source_langcode) ? t('@title [%language translation]', $t_args) : t('Create %language translation of %title', $t_args);
       }
@@ -388,6 +385,16 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
         '#access' => $this->getTranslationAccess($entity, $source_langcode ? 'create' : 'update')->isAllowed(),
         '#multilingual' => TRUE,
       );
+
+      if (isset($form['advanced'])) {
+        $form['content_translation'] += array(
+          '#group' => 'advanced',
+          '#weight' => 100,
+          '#attributes' => array(
+            'class' => array('entity-translation-options'),
+          ),
+        );
+      }
 
       // A new translation is enabled by default.
       $metadata = $this->manager->getTranslationMetadata($entity);
@@ -550,7 +557,7 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
     // Update #title attribute for all elements that are allowed to have a
     // #title attribute according to the Form API Reference. The reason for this
     // check is because some elements have a #title attribute even though it is
-    // not rendered, e.g. field containers.
+    // not rendered; for instance, field containers.
     if (isset($element['#type']) && isset($fapi_title_elements[$element['#type']]) && isset($element['#title'])) {
       $element['#title'] .= $suffix;
     }
@@ -701,6 +708,9 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The entity whose form is being altered.
+   *
+   * @return string|null
+   *   The label of the entity, or NULL if there is no label defined.
    */
   protected function entityFormTitle(EntityInterface $entity) {
     return $entity->label();
@@ -715,4 +725,5 @@ class ContentTranslationHandler implements ContentTranslationHandlerInterface, E
   public static function getDefaultOwnerId() {
     return \Drupal::currentUser()->id();
   }
+
 }

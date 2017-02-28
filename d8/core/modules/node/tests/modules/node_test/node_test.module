@@ -8,9 +8,12 @@
  * interaction with the Node module.
  */
 
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\Display\EntityViewDisplayInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\node\NodeInterface;
+
 
 /**
  * Implements hook_ENTITY_TYPE_view() for node entities.
@@ -151,7 +154,7 @@ function node_test_node_update(NodeInterface $node) {
 /**
  * Implements hook_entity_view_mode_alter().
  */
-function node_test_entity_view_mode_alter(&$view_mode, Drupal\Core\Entity\EntityInterface $entity, $context) {
+function node_test_entity_view_mode_alter(&$view_mode, EntityInterface $entity, $context) {
   // Only alter the view mode if we are on the test callback.
   $change_view_mode = \Drupal::state()->get( 'node_test_change_view_mode') ?: '';
   if ($change_view_mode) {
@@ -169,8 +172,21 @@ function node_test_entity_view_mode_alter(&$view_mode, Drupal\Core\Entity\Entity
 function node_test_node_insert(NodeInterface $node) {
   // Set the node title to the node ID and save.
   if ($node->getTitle() == 'new') {
-    $node->setTitle('Node '. $node->id());
+    $node->setTitle('Node ' . $node->id());
     $node->setNewRevision(FALSE);
     $node->save();
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function node_test_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if (!$form_state->get('node_test_form_alter')) {
+    drupal_set_message('Storage is not set');
+    $form_state->set('node_test_form_alter', TRUE);
+  }
+  else {
+    drupal_set_message('Storage is set');
   }
 }

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\image\Unit\ImageStyleTest.
- */
-
 namespace Drupal\Tests\image\Unit;
 
 use Drupal\Tests\UnitTestCase;
@@ -46,7 +41,7 @@ class ImageStyleTest extends UnitTestCase {
    * @param \Drupal\image\ImageEffectInterface|\PHPUnit_Framework_MockObject_MockObject $image_effect
    *   The image effect used for testing.
    *
-   * @return \Drupal\image\ImageStyleInterface|\Drupal\image\ImageStyleInterface
+   * @return \Drupal\image\ImageStyleInterface
    *   The mocked image style.
    */
   protected function getImageStyleMock($image_effect_id, $image_effect, $stubs = array()) {
@@ -90,7 +85,7 @@ class ImageStyleTest extends UnitTestCase {
   /**
    * {@inheritdoc}
    */
-  public function setUp() {
+  protected function setUp() {
     $this->entityTypeId = $this->randomMachineName();
     $this->provider = $this->randomMachineName();
     $this->entityType = $this->getMock('\Drupal\Core\Entity\EntityTypeInterface');
@@ -175,11 +170,11 @@ class ImageStyleTest extends UnitTestCase {
 
     $image_style = $this->getImageStyleMock($image_effect_id, $image_effect, array('getPrivateKey', 'getHashSalt'));
     $image_style->expects($this->any())
-        ->method('getPrivateKey')
-        ->will($this->returnValue($private_key));
+      ->method('getPrivateKey')
+      ->will($this->returnValue($private_key));
     $image_style->expects($this->any())
-        ->method('getHashSalt')
-        ->will($this->returnValue($hash_salt));
+      ->method('getHashSalt')
+      ->will($this->returnValue($hash_salt));
 
     // Assert the extension has been added to the URI before creating the token.
     $this->assertEquals($image_style->getPathToken('public://test.jpeg.png'), $image_style->getPathToken('public://test.jpeg'));
@@ -197,11 +192,11 @@ class ImageStyleTest extends UnitTestCase {
 
     $image_style = $this->getImageStyleMock($image_effect_id, $image_effect, array('getPrivateKey', 'getHashSalt'));
     $image_style->expects($this->any())
-        ->method('getPrivateKey')
-        ->will($this->returnValue($private_key));
+      ->method('getPrivateKey')
+      ->will($this->returnValue($private_key));
     $image_style->expects($this->any())
-        ->method('getHashSalt')
-        ->will($this->returnValue($hash_salt));
+      ->method('getHashSalt')
+      ->will($this->returnValue($hash_salt));
     // Assert no extension has been added to the uri before creating the token.
     $this->assertNotEquals($image_style->getPathToken('public://test.jpeg.png'), $image_style->getPathToken('public://test.jpeg'));
     $this->assertNotEquals(substr(Crypt::hmacBase64($image_style->id() . ':' . 'public://test.jpeg.png', $private_key . $hash_salt), 0, 8), $image_style->getPathToken('public://test.jpeg'));
