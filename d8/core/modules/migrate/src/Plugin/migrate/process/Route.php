@@ -1,27 +1,28 @@
 <?php
-/**
- * @file
- * Contains \Drupal\migrate\Plugin\migrate\process\Route.
- */
 
 namespace Drupal\migrate\Plugin\migrate\process;
 
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
-use Drupal\migrate\Entity\MigrationInterface;
 use Drupal\Core\Path\PathValidatorInterface;
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\migrate\MigrateExecutableInterface;
+use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate\ProcessPluginBase;
 use Drupal\migrate\Row;
 
 /**
- * @MigrateProcessPlugin(
+ *
+ * @link https://www.drupal.org/node/2750777 Online handbook documentation for route process plugin @endlink
+ *
+ * * @MigrateProcessPlugin(
  *   id = "route"
  * )
  */
 class Route extends ProcessPluginBase implements ContainerFactoryPluginInterface {
 
   /**
+   * The path validator service.
+   *
    * @var \Drupal\Core\Path\PathValidatorInterface
    */
   protected $pathValidator;
@@ -29,10 +30,10 @@ class Route extends ProcessPluginBase implements ContainerFactoryPluginInterface
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, MigrationInterface $migration, PathValidatorInterface $pathValidator) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, MigrationInterface $migration, PathValidatorInterface $path_validator) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->migration = $migration;
-    $this->pathValidator = $pathValidator;
+    $this->pathValidator = $path_validator;
   }
 
   /**
@@ -54,13 +55,20 @@ class Route extends ProcessPluginBase implements ContainerFactoryPluginInterface
    * Set the destination route information based on the source link_path.
    */
   public function transform($value, MigrateExecutableInterface $migrate_executable, Row $row, $destination_property) {
-    list($link_path, $options) = $value;
+    if (is_string($value)) {
+      $link_path = $value;
+      $options = [];
+    }
+    else {
+      list($link_path, $options) = $value;
+    }
+
     $extracted = $this->pathValidator->getUrlIfValidWithoutAccessCheck($link_path);
     $route = array();
 
     if ($extracted) {
       if ($extracted->isExternal()) {
-        $route['route_name'] = null;
+        $route['route_name'] = NULL;
         $route['route_parameters'] = array();
         $route['options'] = $options;
         $route['url'] = $extracted->getUri();
@@ -83,7 +91,7 @@ class Route extends ProcessPluginBase implements ContainerFactoryPluginInterface
           unset($route['options']['query']);
         }
         $route['options'] = $route['options'] + $options;
-        $route['url'] = null;
+        $route['url'] = NULL;
       }
     }
 
@@ -91,4 +99,3 @@ class Route extends ProcessPluginBase implements ContainerFactoryPluginInterface
   }
 
 }
-

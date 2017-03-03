@@ -37,16 +37,16 @@
  * http://twig.sensiolabs.org/doc/templates.html
  *
  * @section sec_theme_hooks Theme Hooks
- * The theme system is invoked in drupal_render() by calling the internal
- * _theme() function, which operates on the concept of "theme hooks". Theme
- * hooks define how a particular type of data should be rendered. They are
- * registered by modules by implementing hook_theme(), which specifies the name
- * of the hook, the input "variables" used to provide data and options, and
- * other information. Modules implementing hook_theme() also need to provide a
- * default implementation for each of their theme hooks, normally in a Twig
- * file, and they may also provide preprocessing functions. For example, the
- * core Search module defines a theme hook for a search result item in
- * search_theme():
+ * The theme system is invoked in \Drupal\Core\Render\Renderer::doRender() by
+ * calling the \Drupal\Core\Theme\ThemeManagerInterface::render() function,
+ * which operates on the concept of "theme hooks". Theme hooks define how a
+ * particular type of data should be rendered. They are registered by modules by
+ * implementing hook_theme(), which specifies the name of the hook, the input
+ * "variables" used to provide data and options, and other information. Modules
+ * implementing hook_theme() also need to provide a default implementation for
+ * each of their theme hooks, normally in a Twig file, and they may also provide
+ * preprocessing functions. For example, the core Search module defines a theme
+ * hook for a search result item in search_theme():
  * @code
  * return array(
  *   'search_result' => array(
@@ -254,13 +254,13 @@
  * form array, which specifies the form elements for an HTML form; see the
  * @link form_api Form generation topic @endlink for more information on forms.
  *
- * Render arrays (at each level in the hierarchy) will usually have one of the
- * following three properties defined:
+ * Render arrays (at any level of the hierarchy) will usually have one of the
+ * following properties defined:
  * - #type: Specifies that the array contains data and options for a particular
- *   type of "render element" (examples: 'form', for an HTML form; 'textfield',
- *   'submit', and other HTML form element types; 'table', for a table with
- *   rows, columns, and headers). See @ref elements below for more on render
- *   element types.
+ *   type of "render element" (for example, 'form', for an HTML form;
+ *   'textfield', 'submit', for HTML form element types; 'table', for a table
+ *   with rows, columns, and headers). See @ref elements below for more on
+ *   render element types.
  * - #theme: Specifies that the array contains data to be themed by a particular
  *   theme hook. Modules define theme hooks by implementing hook_theme(), which
  *   specifies the input "variables" used to provide data and options; if a
@@ -277,30 +277,29 @@
  *   can customize the markup. Note that the value is passed through
  *   \Drupal\Component\Utility\Xss::filterAdmin(), which strips known XSS
  *   vectors while allowing a permissive list of HTML tags that are not XSS
- *   vectors. (I.e, <script> and <style> are not allowed.) See
- *   \Drupal\Component\Utility\Xss::$adminTags for the list of tags that will
- *   be allowed. If your markup needs any of the tags that are not in this
- *   whitelist, then you can implement a theme hook and template file and/or
- *   an asset library. Aternatively, you can use the render array key
- *   #allowed_tags to alter which tags are filtered.
+ *   vectors. (For example, <script> and <style> are not allowed.) See
+ *   \Drupal\Component\Utility\Xss::$adminTags for the list of allowed tags. If
+ *   your markup needs any of the tags not in this whitelist, then you can
+ *   implement a theme hook and/or an asset library. Alternatively, you can use
+ *   the key #allowed_tags to alter which tags are filtered.
  * - #plain_text: Specifies that the array provides text that needs to be
- *   escaped. This value takes precedence over #markup if present.
- * - #allowed_tags: If #markup is supplied this can be used to change which tags
- *   are using to filter the markup. The value should be an array of tags that
- *   Xss::filter() would accept. If #plain_text is set this value is ignored.
+ *   escaped. This value takes precedence over #markup.
+ * - #allowed_tags: If #markup is supplied, this can be used to change which
+ *   tags are allowed in the markup. The value is an array of tags that
+ *   Xss::filter() would accept. If #plain_text is set, this value is ignored.
  *
  *   Usage example:
  *   @code
- *   $output['admin_filtered_string'] = array(
+ *   $output['admin_filtered_string'] = [
  *     '#markup' => '<em>This is filtered using the admin tag list</em>',
- *   );
- *   $output['filtered_string'] = array(
- *     '#markup' => '<em>This is filtered</em>',
- *     '#allowed_tags' => ['strong'],
- *   );
- *   $output['escaped_string'] = array(
+ *   ];
+ *   $output['filtered_string'] = [
+ *     '#markup' => '<video><source src="v.webm" type="video/webm"></video>',
+ *     '#allowed_tags' => ['video', 'source'],
+ *   ];
+ *   $output['escaped_string'] = [
  *     '#plain_text' => '<em>This is escaped</em>',
- *   );
+ *   ];
  *   @endcode
  *
  *   @see core.libraries.yml
@@ -324,8 +323,11 @@
  *   namespace Element, and generally extend the
  *   \Drupal\Core\Render\Element\FormElement base class.
  * See the @link plugin_api Plugin API topic @endlink for general information
- * on plugins, and look for classes with the RenderElement or FormElement
- * annotation to discover what render elements are available.
+ * on plugins. You can search for classes with the RenderElement or FormElement
+ * annotation to discover what render elements are available. API reference
+ * sites (such as https://api.drupal.org) generate lists of all existing
+ * elements from these classes. Look for the Elements link in the API Navigation
+ * block.
  *
  * Modules can define render elements by defining an element plugin.
  *
@@ -366,7 +368,7 @@
  * @code
  *   '#cache' => [
  *     'keys' => ['entity_view', 'node', $node->id()],
- *     'contexts' => ['language'],
+ *     'contexts' => ['languages'],
  *     'tags' => ['node:' . $node->id()],
  *     'max-age' => Cache::PERMANENT,
  *   ],
@@ -429,9 +431,10 @@
  *
  * @section render_pipeline The render pipeline
  * The term "render pipeline" refers to the process Drupal uses to take
- * information provided by modules and render it into a response. For more
- * details on this process, see https://www.drupal.org/developing/api/8/render;
- * for background on routing concepts, see @ref sec_controller.
+ * information provided by modules and render it into a response. See
+ * https://www.drupal.org/developing/api/8/render for more details on this
+ * process. For background on routing concepts, see
+ * @link routing Routing API. @endlink
  *
  * There are in fact multiple render pipelines:
  * - Drupal always uses the Symfony render pipeline. See
@@ -468,6 +471,36 @@
  * @see \Drupal\Core\Render\Plugin\DisplayVariant\SimplePageVariant
  * @see \Drupal\block\Plugin\DisplayVariant\BlockPageVariant
  * @see \Drupal\Core\Render\BareHtmlPageRenderer
+ *
+ * @}
+ */
+
+/**
+ * @defgroup listing_page_element Page header for Elements page
+ * @{
+ * Introduction to form and render elements
+ *
+ * Render elements are referenced in render arrays. Render arrays contain data
+ * to be rendered, along with meta-data and attributes that specify how to
+ * render the data into markup; see the
+ * @link theme_render Render API topic @endlink for an overview of render
+ * arrays and render elements. Form arrays are a subset of render arrays,
+ * representing HTML forms; form elements are a subset of render elements,
+ * representing HTML elements for forms. See the
+ * @link form_api Form API topic @endlink for an overview of forms, form
+ * processing, and form arrays.
+ *
+ * Each form and render element type corresponds to an element plugin class;
+ * each of them either extends \Drupal\Core\Render\Element\RenderElement
+ * (render elements) or \Drupal\Core\Render\Element\FormElement (form
+ * elements). Usage and properties are documented on the individual classes,
+ * and the two base classes list common properties shared by all render
+ * elements and the form element subset, respectively.
+ *
+ * @see theme_render
+ * @see form_api
+ * @see \Drupal\Core\Render\Element\RenderElement
+ * @see \Drupal\Core\Render\Element\FormElement
  *
  * @}
  */
@@ -512,7 +545,8 @@ function hook_form_system_theme_settings_alter(&$form, \Drupal\Core\Form\FormSta
  * preprocess variables for a specific theme hook, whether implemented as a
  * template or function.
  *
- * For more detailed information, see _theme().
+ * For more detailed information, see the
+ * @link themeable Theme system overview topic @endlink.
  *
  * @param $variables
  *   The variables array (modify in place).
@@ -520,7 +554,7 @@ function hook_form_system_theme_settings_alter(&$form, \Drupal\Core\Form\FormSta
  *   The name of the theme hook.
  */
 function hook_preprocess(&$variables, $hook) {
- static $hooks;
+  static $hooks;
 
   // Add contextual links to the variables, if the user has permission.
 
@@ -560,7 +594,8 @@ function hook_preprocess(&$variables, $hook) {
  * hook. It should only be used if a module needs to override or add to the
  * theme preprocessing for a theme hook it didn't define.
  *
- * For more detailed information, see _theme().
+ * For more detailed information, see the
+ * @link themeable Theme system overview topic @endlink.
  *
  * @param $variables
  *   The variables array (modify in place).
@@ -752,17 +787,17 @@ function hook_render_template($template_file, $variables) {
  * A module may implement this hook in order to alter the element type defaults
  * defined by a module.
  *
- * @param array $types
+ * @param array $info
  *   An associative array with structure identical to that of the return value
  *   of \Drupal\Core\Render\ElementInfoManagerInterface::getInfo().
  *
  * @see \Drupal\Core\Render\ElementInfoManager
  * @see \Drupal\Core\Render\Element\ElementInterface
  */
-function hook_element_info_alter(array &$types) {
+function hook_element_info_alter(array &$info) {
   // Decrease the default size of textfields.
-  if (isset($types['textfield']['#size'])) {
-    $types['textfield']['#size'] = 40;
+  if (isset($info['textfield']['#size'])) {
+    $info['textfield']['#size'] = 40;
   }
 }
 
@@ -1074,7 +1109,8 @@ function hook_page_bottom(array &$page_bottom) {
  *     Template implementations receive each array key as a variable in the
  *     template file (so they must be legal PHP/Twig variable names). Function
  *     implementations are passed the variables in a single $variables function
- *     argument.
+ *     argument. If you are using these variables in a render array, prefix the
+ *     variable names defined here with a #.
  *   - render element: Used for render element items only: the name of the
  *     renderable element or element tree to pass to the theme function. This
  *     name is used as the name of the variable that holds the renderable
@@ -1102,7 +1138,7 @@ function hook_page_bottom(array &$page_bottom) {
  *     Instead of this suggestion's implementation being used directly, the base
  *     hook will be invoked with this implementation as its first suggestion.
  *     The base hook's files will be included and the base hook's preprocess
- *     functions will be called in place of any suggestion's preprocess
+ *     functions will be called in addition to any suggestion's preprocess
  *     functions. If an implementation of hook_theme_suggestions_HOOK() (where
  *     HOOK is the base hook) changes the suggestion order, a different
  *     suggestion may be used in place of this suggestion. If after

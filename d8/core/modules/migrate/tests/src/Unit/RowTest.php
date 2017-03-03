@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\migrate\Unit\RowTest.
- */
-
 namespace Drupal\Tests\migrate\Unit;
 
 use Drupal\migrate\Plugin\MigrateIdMapInterface;
@@ -54,7 +49,7 @@ class RowTest extends UnitTestCase {
    * Tests object creation: empty.
    */
   public function testRowWithoutData() {
-    $row = new Row(array(), array());
+    $row = new Row();
     $this->assertSame(array(), $row->getSource(), 'Empty row');
   }
 

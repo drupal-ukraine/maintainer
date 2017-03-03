@@ -1,21 +1,14 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views_ui\ViewEditForm.
- */
-
 namespace Drupal\views_ui;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\SafeMarkup;
-use Drupal\Component\Utility\Xss;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\HtmlCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Render\Element;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Url;
 use Drupal\user\SharedTempStoreFactory;
@@ -227,6 +220,7 @@ class ViewEditForm extends ViewFormBase {
       '#type' => 'submit',
       '#value' => $this->t('Cancel'),
       '#submit' => array('::cancel'),
+      '#limit_validation_errors' => array(),
     );
     if ($this->entity->isLocked()) {
       $actions['submit']['#access'] = FALSE;
@@ -264,6 +258,16 @@ class ViewEditForm extends ViewFormBase {
     $displays = $view->get('display');
     foreach ($displays as $id => $display) {
       if (!empty($display['deleted'])) {
+        // Remove view display from view attachment under the attachments
+        // options.
+        $display_handler = $executable->displayHandlers->get($id);
+        if ($attachments = $display_handler->getAttachedDisplays()) {
+          foreach ($attachments as $attachment ) {
+            $attached_options = $executable->displayHandlers->get($attachment)->getOption('displays');
+            unset($attached_options[$id]);
+            $executable->displayHandlers->get($attachment)->setOption('displays', $attached_options);
+          }
+        }
         $executable->displayHandlers->remove($id);
         unset($displays[$id]);
       }
@@ -271,7 +275,7 @@ class ViewEditForm extends ViewFormBase {
 
     // Rename display ids if needed.
     foreach ($executable->displayHandlers as $id => $display) {
-      if (!empty($display->display['new_id'])) {
+      if (!empty($display->display['new_id']) && empty($display->display['deleted'])) {
         $new_id = $display->display['new_id'];
         $display->display['id'] = $new_id;
         unset($display->display['new_id']);
@@ -1061,7 +1065,7 @@ class ViewEditForm extends ViewFormBase {
         $field_name = '(' . $relationships[$field['relationship']] . ') ' . $field_name;
       }
 
-      $description = Xss::filterAdmin($handler->adminSummary());
+      $description = $handler->adminSummary();
       $link_text = $field_name . (empty($description) ? '' : " ($description)");
       $link_attributes = array('class' => array('views-ajax-link'));
       if (!empty($field['exclude'])) {
@@ -1076,7 +1080,7 @@ class ViewEditForm extends ViewFormBase {
         'type' => $type,
         'id' => $id,
       ), array('attributes' => $link_attributes)));
-      $build['fields'][$id]['#class'][] = Html::cleanCssIdentifier($display['id']. '-' . $type . '-' . $id);
+      $build['fields'][$id]['#class'][] = Html::cleanCssIdentifier($display['id'] . '-' . $type . '-' . $id);
 
       if ($executable->display_handler->useGroupBy() && $handler->usesGroupBy()) {
         $build['fields'][$id]['#settings_links'][] = $this->l(SafeMarkup::format('<span class="label">@text</span>', array('@text' => $this->t('Aggregation settings'))), new Url('views_ui.form_handler_group', array(

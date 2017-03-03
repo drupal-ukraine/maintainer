@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\Link.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Component\Utility\NestedArray;
@@ -14,6 +9,20 @@ use Drupal\Core\Url as CoreUrl;
 
 /**
  * Provides a link render element.
+ *
+ * Properties:
+ * - #title: The link text.
+ * - #url: \Drupal\Url object containing URL information pointing to a internal
+ *   or external link . See \Drupal\Core\Utility\LinkGeneratorInterface.
+ *
+ * Usage example:
+ * @code
+ * $build['examples_link'] = [
+ *   '#title' => $this->t('Examples'),
+ *   '#type' => 'link',
+ *   '#url' => Url::fromRoute('examples.description')
+ * ];
+ * @endcode
  *
  * @RenderElement("link")
  */
@@ -83,7 +92,7 @@ class Link extends RenderElement {
       /** @var \Drupal\Core\Utility\LinkGenerator $link_generator */
       $link_generator = \Drupal::service('link_generator');
       $generated_link = $link_generator->generate($element['#title'], $element['#url']->setOptions($options));
-      $element['#markup'] = $generated_link->getGeneratedLink();
+      $element['#markup'] = $generated_link;
       $generated_link->merge(BubbleableMetadata::createFromRenderArray($element))
         ->applyTo($element);
     }

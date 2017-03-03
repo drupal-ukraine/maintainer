@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Plugin\views\field\BulkForm.
- */
-
 namespace Drupal\system\Plugin\views\field;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
@@ -167,7 +162,7 @@ class BulkForm extends FieldPluginBase implements CacheableDependencyInterface {
    */
   protected function defineOptions() {
     $options = parent::defineOptions();
-    $options['action_title'] = array('default' => $this->t('With selection'));
+    $options['action_title'] = array('default' => $this->t('Action'));
     $options['include_exclude'] = array(
       'default' => 'exclude',
     );
@@ -276,7 +271,7 @@ class BulkForm extends FieldPluginBase implements CacheableDependencyInterface {
       }
 
       // Replace the form submit button label.
-      $form['actions']['submit']['#value'] = $this->t('Apply');
+      $form['actions']['submit']['#value'] = $this->t('Apply to selected items');
 
       // Ensure a consistent container for filters/operations in the view header.
       $form['header'] = array(
@@ -349,8 +344,11 @@ class BulkForm extends FieldPluginBase implements CacheableDependencyInterface {
    */
   public function viewsFormSubmit(&$form, FormStateInterface $form_state) {
     if ($form_state->get('step') == 'views_form_views_form') {
-      // Filter only selected checkboxes.
-      $selected = array_filter($form_state->getValue($this->options['id']));
+      // Filter only selected checkboxes. Use the actual user input rather than
+      // the raw form values array, since the site data may change before the
+      // bulk form is submitted, which can lead to data loss.
+      $user_input = $form_state->getUserInput();
+      $selected = array_filter($user_input[$this->options['id']]);
       $entities = array();
       $action = $this->actions[$form_state->getValue('action')];
       $count = 0;
@@ -385,7 +383,6 @@ class BulkForm extends FieldPluginBase implements CacheableDependencyInterface {
       else {
         // Don't display the message unless there are some elements affected and
         // there is no confirmation form.
-        $count = count(array_filter($form_state->getValue($this->options['id'])));
         if ($count) {
           drupal_set_message($this->formatPlural($count, '%action was applied to @count item.', '%action was applied to @count items.', array(
             '%action' => $action->label(),
@@ -399,7 +396,7 @@ class BulkForm extends FieldPluginBase implements CacheableDependencyInterface {
    * Returns the message to be displayed when there are no selected items.
    *
    * @return string
-   *  Message displayed when no items are selected.
+   *   Message displayed when no items are selected.
    */
   protected function emptySelectedMessage() {
     return $this->t('No items selected.');

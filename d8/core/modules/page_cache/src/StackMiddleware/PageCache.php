@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\page_cache\StackMiddleware\PageCache.
- */
-
 namespace Drupal\page_cache\StackMiddleware;
 
 use Drupal\Core\Cache\Cache;
@@ -12,6 +7,7 @@ use Drupal\Core\Cache\CacheableResponseInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\PageCache\RequestPolicyInterface;
 use Drupal\Core\PageCache\ResponsePolicyInterface;
+use Drupal\Core\Site\Settings;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -210,6 +206,26 @@ class PageCache implements HttpKernelInterface {
     /** @var \Symfony\Component\HttpFoundation\Response $response */
     $response = $this->httpKernel->handle($request, $type, $catch);
 
+    // Only set the 'X-Drupal-Cache' header if caching is allowed for this
+    // response.
+    if ($this->storeResponse($request, $response)) {
+      $response->headers->set('X-Drupal-Cache', 'MISS');
+    }
+
+    return $response;
+  }
+
+  /**
+   * Stores a response in the page cache.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   A request object.
+   * @param \Symfony\Component\HttpFoundation\Response $response
+   *   A response object that should be stored in the page cache.
+   *
+   * @returns bool
+   */
+  protected function storeResponse(Request $request, Response $response) {
     // Drupal's primary cache invalidation architecture is cache tags: any
     // response that varies by a configuration value or data in a content
     // entity should have cache tags, to allow for instant cache invalidation
@@ -232,7 +248,7 @@ class PageCache implements HttpKernelInterface {
     //   so by replacing/extending this middleware service or adding another
     //   one.
     if (!$response instanceof CacheableResponseInterface) {
-      return $response;
+      return FALSE;
     }
 
     // Currently it is not possible to cache binary file or streamed responses:
@@ -240,28 +256,44 @@ class PageCache implements HttpKernelInterface {
     // Therefore exclude them, even for subclasses that implement
     // CacheableResponseInterface.
     if ($response instanceof BinaryFileResponse || $response instanceof StreamedResponse) {
-      return $response;
+      return FALSE;
     }
 
     // Allow policy rules to further restrict which responses to cache.
     if ($this->responsePolicy->check($response, $request) === ResponsePolicyInterface::DENY) {
-      return $response;
+      return FALSE;
     }
 
-    // The response passes all of the above checks, so cache it.
+    $request_time = $request->server->get('REQUEST_TIME');
+    // The response passes all of the above checks, so cache it. Page cache
+    // entries default to Cache::PERMANENT since they will be expired via cache
+    // tags locally. Because of this, page cache ignores max age.
     // - Get the tags from CacheableResponseInterface per the earlier comments.
     // - Get the time expiration from the Expires header, rather than the
     //   interface, but see https://www.drupal.org/node/2352009 about possibly
     //   changing that.
-    $tags = $response->getCacheableMetadata()->getCacheTags();
-    $date = $response->getExpires()->getTimestamp();
-    $expire = ($date > time()) ? $date : Cache::PERMANENT;
-    $this->set($request, $response, $expire, $tags);
+    $expire = 0;
+    // 403 and 404 responses can fill non-LRU cache backends and generally are
+    // likely to have a low cache hit rate. So do not cache them permanently.
+    if ($response->isClientError()) {
+      // Cache for an hour by default. If the 'cache_ttl_4xx' setting is
+      // set to 0 then do not cache the response.
+      $cache_ttl_4xx = Settings::get('cache_ttl_4xx', 3600);
+      if ($cache_ttl_4xx > 0) {
+        $expire = $request_time + $cache_ttl_4xx;
+      }
+    }
+    else {
+      $date = $response->getExpires()->getTimestamp();
+      $expire = ($date > $request_time) ? $date : Cache::PERMANENT;
+    }
 
-    // Mark response as a cache miss.
-    $response->headers->set('X-Drupal-Cache', 'MISS');
+    if ($expire === Cache::PERMANENT || $expire > $request_time) {
+      $tags = $response->getCacheableMetadata()->getCacheTags();
+      $this->set($request, $response, $expire, $tags);
+    }
 
-    return $response;
+    return TRUE;
   }
 
   /**

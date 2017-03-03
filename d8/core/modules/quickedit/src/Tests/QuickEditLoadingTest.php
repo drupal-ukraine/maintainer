@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\quickedit\Tests\QuickEditLoadingTest.
- */
-
 namespace Drupal\quickedit\Tests;
 
 use Drupal\Component\Serialization\Json;
@@ -17,6 +12,7 @@ use Drupal\Core\Url;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\simpletest\WebTestBase;
+use Drupal\filter\Entity\FilterFormat;
 
 /**
  * Tests loading of in-place editing functionality and lazy loading of its
@@ -57,7 +53,7 @@ class QuickEditLoadingTest extends WebTestBase {
     parent::setUp();
 
     // Create a text format.
-    $filtered_html_format = entity_create('filter_format', array(
+    $filtered_html_format = FilterFormat::create(array(
       'format' => 'filtered_html',
       'name' => 'Filtered HTML',
       'weight' => 0,
@@ -70,6 +66,12 @@ class QuickEditLoadingTest extends WebTestBase {
       'type' => 'article',
       'name' => 'Article',
     ));
+
+    // Set the node type to initially not have revisions.
+    // Testing with revisions will be done later.
+    $node_type = NodeType::load('article');
+    $node_type->setNewRevision(FALSE);
+    $node_type->save();
 
     // Create one node of the above node type using the above text format.
     $this->drupalCreateNode(array(
@@ -98,17 +100,19 @@ class QuickEditLoadingTest extends WebTestBase {
     $this->drupalGet('node/1');
 
     // Library and in-place editors.
-    $this->assertNoRaw('core/modules/quickedit/js/quickedit.js',  'Quick Edit library not loaded.');
+    $this->assertNoRaw('core/modules/quickedit/js/quickedit.js', 'Quick Edit library not loaded.');
     $this->assertNoRaw('core/modules/quickedit/js/editors/formEditor.js', "'form' in-place editor not loaded.");
 
-    // HTML annotation must always exist (to not break the render cache).
-    $this->assertRaw('data-quickedit-entity-id="node/1"');
-    $this->assertRaw('data-quickedit-field-id="node/1/body/en/full"');
+    // HTML annotation and title class does not exist for users without
+    // permission to in-place edit.
+    $this->assertNoRaw('data-quickedit-entity-id="node/1"');
+    $this->assertNoRaw('data-quickedit-field-id="node/1/body/en/full"');
+    $this->assertNoFieldByXPath('//h1[contains(@class, "js-quickedit-page-title")]');
 
     // Retrieving the metadata should result in an empty 403 response.
     $post = array('fields[0]' => 'node/1/body/en/full');
     $response = $this->drupalPostWithFormat(Url::fromRoute('quickedit.metadata'), 'json', $post);
-    $this->assertIdentical('{"message":""}', $response);
+    $this->assertIdentical(Json::encode(['message' => "The 'access in-place editing' permission is required."]), $response);
     $this->assertResponse(403);
 
     // Quick Edit's JavaScript would SearchRankingTestnever hit these endpoints if the metadata
@@ -116,11 +120,12 @@ class QuickEditLoadingTest extends WebTestBase {
     // able to use any of the other endpoints either.
     $post = array('editors[0]' => 'form') + $this->getAjaxPageStatePostData();
     $response = $this->drupalPost('quickedit/attachments', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
-    $this->assertIdentical('{}', $response);
+    $message = Json::encode(['message' => "A fatal error occurred: The 'access in-place editing' permission is required."]);
+    $this->assertIdentical($message, $response);
     $this->assertResponse(403);
     $post = array('nocssjs' => 'true') + $this->getAjaxPageStatePostData();
     $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
-    $this->assertIdentical('{}', $response);
+    $this->assertIdentical($message, $response);
     $this->assertResponse(403);
     $edit = array();
     $edit['form_id'] = 'quickedit_field_form';
@@ -131,11 +136,11 @@ class QuickEditLoadingTest extends WebTestBase {
     $edit['body[0][format]'] = 'filtered_html';
     $edit['op'] = t('Save');
     $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $edit, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
-    $this->assertIdentical('{}', $response);
+    $this->assertIdentical($message, $response);
     $this->assertResponse(403);
     $post = array('nocssjs' => 'true');
     $response = $this->drupalPostWithFormat('quickedit/entity/' . 'node/1', 'json', $post);
-    $this->assertIdentical('{"message":""}', $response);
+    $this->assertIdentical(Json::encode(['message' => "The 'access in-place editing' permission is required."]), $response);
     $this->assertResponse(403);
   }
 
@@ -154,9 +159,11 @@ class QuickEditLoadingTest extends WebTestBase {
     $this->assertTrue(in_array('quickedit/quickedit', $libraries), 'Quick Edit library loaded.');
     $this->assertFalse(in_array('quickedit/quickedit.inPlaceEditor.form', $libraries), "'form' in-place editor not loaded.");
 
-    // HTML annotation must always exist (to not break the render cache).
+    // HTML annotation and title class must always exist (to not break the
+    // render cache).
     $this->assertRaw('data-quickedit-entity-id="node/1"');
     $this->assertRaw('data-quickedit-field-id="node/1/body/en/full"');
+    $this->assertFieldByXPath('//h1[contains(@class, "js-quickedit-page-title")]');
 
     // There should be only one revision so far.
     $node = Node::load(1);
@@ -185,7 +192,7 @@ class QuickEditLoadingTest extends WebTestBase {
     //  1. a settings command with useless metadata: AjaxController is dumb
     //  2. an insert command that loads the required in-place editors
     $post = array('editors[0]' => 'form') + $this->getAjaxPageStatePostData();
-    $response = $this->drupalPost('quickedit/attachments', 'application/vnd.drupal-ajax', $post);
+    $response = $this->drupalPost('quickedit/attachments', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
     $ajax_commands = Json::decode($response);
     $this->assertIdentical(2, count($ajax_commands), 'The attachments HTTP request results in two AJAX commands.');
     // First command: settings.
@@ -197,7 +204,7 @@ class QuickEditLoadingTest extends WebTestBase {
     // Retrieving the form for this field should result in a 200 response,
     // containing only a quickeditFieldForm command.
     $post = array('nocssjs' => 'true', 'reset' => 'true') + $this->getAjaxPageStatePostData();
-    $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', 'application/vnd.drupal-ajax', $post);
+    $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
     $this->assertResponse(200);
     $ajax_commands = Json::decode($response);
     $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -225,7 +232,7 @@ class QuickEditLoadingTest extends WebTestBase {
 
       // Submit field form and check response. This should store the updated
       // entity in PrivateTempStore on the server.
-      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', 'application/vnd.drupal-ajax', $post);
+      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
       $this->assertResponse(200);
       $ajax_commands = Json::decode($response);
       $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -267,7 +274,7 @@ class QuickEditLoadingTest extends WebTestBase {
 
       // Retrieve field form.
       $post = array('nocssjs' => 'true', 'reset' => 'true');
-      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', 'application/vnd.drupal-ajax', $post);
+      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
       $this->assertResponse(200);
       $ajax_commands = Json::decode($response);
       $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -284,7 +291,7 @@ class QuickEditLoadingTest extends WebTestBase {
         'form_build_id' => $build_id_match[1],
       );
       $post += $edit + $this->getAjaxPageStatePostData();
-      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', 'application/vnd.drupal-ajax', $post);
+      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
       $this->assertResponse(200);
       $ajax_commands = Json::decode($response);
       $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -342,7 +349,7 @@ class QuickEditLoadingTest extends WebTestBase {
     // Retrieving the form for this field should result in a 200 response,
     // containing only a quickeditFieldForm command.
     $post = array('nocssjs' => 'true', 'reset' => 'true') + $this->getAjaxPageStatePostData();
-    $response = $this->drupalPost('quickedit/form/' . 'node/1/title/en/full', 'application/vnd.drupal-ajax', $post);
+    $response = $this->drupalPost('quickedit/form/' . 'node/1/title/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
     $this->assertResponse(200);
     $ajax_commands = Json::decode($response);
     $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -369,7 +376,7 @@ class QuickEditLoadingTest extends WebTestBase {
 
       // Submit field form and check response. This should store the
       // updated entity in PrivateTempStore on the server.
-      $response = $this->drupalPost('quickedit/form/' . 'node/1/title/en/full', 'application/vnd.drupal-ajax', $post);
+      $response = $this->drupalPost('quickedit/form/' . 'node/1/title/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
       $this->assertResponse(200);
       $ajax_commands = Json::decode($response);
       $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -421,7 +428,7 @@ class QuickEditLoadingTest extends WebTestBase {
 
     // Request editing to render results with the custom render pipeline.
     $post = array('nocssjs' => 'true') + $this->getAjaxPageStatePostData();
-    $response = $this->drupalPost($custom_render_url, 'application/vnd.drupal-ajax', $post);
+    $response = $this->drupalPost($custom_render_url, '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
     $ajax_commands = Json::decode($response);
 
     // Prepare form values for submission. drupalPostAJAX() is not suitable for
@@ -445,7 +452,7 @@ class QuickEditLoadingTest extends WebTestBase {
 
       // Submit field form and check response. Should render with the custom
       // render pipeline.
-      $response = $this->drupalPost($custom_render_url, 'application/vnd.drupal-ajax', $post);
+      $response = $this->drupalPost($custom_render_url, '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
       $this->assertResponse(200);
       $ajax_commands = Json::decode($response);
       $this->assertIdentical(1, count($ajax_commands), 'The field form HTTP request results in one AJAX command.');
@@ -465,7 +472,7 @@ class QuickEditLoadingTest extends WebTestBase {
     $this->drupalLogin($this->editorUser);
 
     $post = array('nocssjs' => 'true') + $this->getAjaxPageStatePostData();
-    $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', 'application/vnd.drupal-ajax', $post);
+    $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
     $this->assertResponse(200);
     $ajax_commands = Json::decode($response);
 
@@ -493,7 +500,7 @@ class QuickEditLoadingTest extends WebTestBase {
 
       // Submit field form and check response. Should throw a validation error
       // because the node was changed in the meantime.
-      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', 'application/vnd.drupal-ajax', $post);
+      $response = $this->drupalPost('quickedit/form/' . 'node/1/body/en/full', '', $post, ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
       $this->assertResponse(200);
       $ajax_commands = Json::decode($response);
       $this->assertIdentical(2, count($ajax_commands), 'The field form HTTP request results in two AJAX commands.');
@@ -518,6 +525,7 @@ class QuickEditLoadingTest extends WebTestBase {
     $this->drupalPlaceBlock('block_content:' . $block->uuid());
 
     // Check that the data- attribute is present.
+    $this->drupalLogin($this->editorUser);
     $this->drupalGet('');
     $this->assertRaw('data-quickedit-entity-id="block_content/1"');
   }
@@ -556,9 +564,10 @@ class QuickEditLoadingTest extends WebTestBase {
     ], t('Save'));
 
     // The image field form should load normally.
-    $response = $this->drupalPost('quickedit/form/node/1/field_image/en/full', 'application/vnd.drupal-ajax', ['nocssjs' => 'true'] + $this->getAjaxPageStatePostData());
+    $response = $this->drupalPost('quickedit/form/node/1/field_image/en/full', '', ['nocssjs' => 'true'] + $this->getAjaxPageStatePostData(), ['query' => [MainContentViewSubscriber::WRAPPER_FORMAT => 'drupal_ajax']]);
     $this->assertResponse(200);
     $ajax_commands = Json::decode($response);
     $this->assertIdentical('<form ', Unicode::substr($ajax_commands[0]['data'], 0, 6), 'The quickeditFieldForm command contains a form.');
   }
+
 }

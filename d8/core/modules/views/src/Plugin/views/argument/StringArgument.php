@@ -1,15 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\argument\StringArgument.
- */
-
 namespace Drupal\views\Plugin\views\argument;
 
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Database\Database;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Plugin\Context\ContextDefinition;
 use Drupal\views\ViewExecutable;
 use Drupal\views\Plugin\views\display\DisplayPluginBase;
 use Drupal\views\ManyToOneHelper;
@@ -99,7 +95,7 @@ class StringArgument extends ArgumentPluginBase {
     $form['path_case'] = array(
       '#type' => 'select',
       '#title' => $this->t('Case in path'),
-      '#description' => $this->t('When printing url paths, how to transform the case of the filter value. Do not use this unless with Postgres as it uses case sensitive comparisons.'),
+      '#description' => $this->t('When printing URL paths, how to transform the case of the filter value. Do not use this unless with Postgres as it uses case sensitive comparisons.'),
       '#options' => array(
         'none' => $this->t('No transform'),
         'upper' => $this->t('Upper case'),
@@ -322,6 +318,19 @@ class StringArgument extends ArgumentPluginBase {
 
   public function summaryName($data) {
     return $this->caseTransform(parent::summaryName($data), $this->options['case']);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getContextDefinition() {
+    if ($context_definition = parent::getContextDefinition()) {
+      return $context_definition;
+    }
+
+    // If the parent does not provide a context definition through the
+    // validation plugin, fall back to the string type.
+    return new ContextDefinition('string', $this->adminLabel(), FALSE);
   }
 
 }

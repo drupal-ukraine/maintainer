@@ -1,11 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Ajax\OpenDialogCommand.
- */
-
 namespace Drupal\Core\Ajax;
+
+use Drupal\Component\Render\PlainTextOutput;
 
 /**
  * Defines an AJAX command to open certain content in a dialog.
@@ -74,6 +71,7 @@ class OpenDialogCommand implements CommandInterface, CommandWithAttachedAssetsIn
    *   populated automatically from the current request.
    */
   public function __construct($selector, $title, $content, array $dialog_options = array(), $settings = NULL) {
+    $title = PlainTextOutput::renderFromHtml($title);
     $dialog_options += array('title' => $title);
     $this->selector = $selector;
     $this->content = $content;

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\MachineName.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Component\Utility\NestedArray;
@@ -27,7 +22,10 @@ use Drupal\Core\Language\LanguageInterface;
  * Properties:
  * - #machine_name: An associative array containing:
  *   - exists: A callable to invoke for checking whether a submitted machine
- *     name value already exists. The submitted value is passed as an argument.
+ *     name value already exists. The arguments passed to the callback will be:
+ *     - The submitted value.
+ *     - The element array.
+ *     - The form state object.
  *     In most cases, an existing API or menu argument loader function can be
  *     re-used. The callback is only invoked if the submitted value differs from
  *     the element's #default_value.
@@ -192,6 +190,7 @@ class MachineName extends Textfield {
     $element['#attached']['library'][] = 'core/drupal.machine-name';
     $options = [
       'replace_pattern',
+      'replace_token',
       'replace',
       'maxlength',
       'target',
@@ -200,6 +199,11 @@ class MachineName extends Textfield {
       'field_suffix',
       'suffix',
     ];
+
+    /** @var \Drupal\Core\Access\CsrfTokenGenerator $token_generator */
+    $token_generator = \Drupal::service('csrf_token');
+    $element['#machine_name']['replace_token'] = $token_generator->get($element['#machine_name']['replace_pattern']);
+
     $element['#attached']['drupalSettings']['machineName']['#' . $source['#id']] = array_intersect_key($element['#machine_name'], array_flip($options));
     $element['#attached']['drupalSettings']['langcode'] = $language->getId();
 

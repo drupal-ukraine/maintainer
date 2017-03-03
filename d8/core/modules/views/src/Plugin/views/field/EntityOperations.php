@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\field\EntityOperations.
- */
-
 namespace Drupal\views\Plugin\views\field;
 
 use Drupal\Core\Entity\EntityManagerInterface;
@@ -168,6 +163,13 @@ class EntityOperations extends FieldPluginBase {
    */
   protected function getView() {
     return $this->view;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function clickSortable() {
+    return FALSE;
   }
 
 }

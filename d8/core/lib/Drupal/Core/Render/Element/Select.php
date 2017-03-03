@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\Select.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -14,11 +9,52 @@ use Drupal\Core\Render\Element;
  * Provides a form element for a drop-down menu or scrolling selection box.
  *
  * Properties:
- * - #options: An associative array, where the keys are the retured values for
- *   each option, and the values are the options to be shown in the drop-down
- *   list.
- * - #empty_option: The label that will be displayed to denote no selection.
- * - #empty_value: The value of the option that is used to denote no selection.
+ * - #options: An associative array, where the keys are the values for each
+ *   option, and the values are the option labels to be shown in the drop-down
+ *   list. If a value is an array, it will be rendered similarly, but as an
+ *   optgroup. The key of the sub-array will be used as the label for the
+ *   optgroup. Nesting optgroups is not allowed.
+ * - #empty_option: (optional) The label to show for the first default option.
+ *   By default, the label is automatically set to "- Select -" for a required
+ *   field and "- None -" for an optional field.
+ * - #empty_value: (optional) The value for the first default option, which is
+ *   used to determine whether the user submitted a value or not.
+ *   - If #required is TRUE, this defaults to '' (an empty string).
+ *   - If #required is not TRUE and this value isn't set, then no extra option
+ *     is added to the select control, leaving the control in a slightly
+ *     illogical state, because there's no way for the user to select nothing,
+ *     since all user agents automatically preselect the first available
+ *     option. But people are used to this being the behavior of select
+ *     controls.
+ *     @todo Address the above issue in Drupal 8.
+ *   - If #required is not TRUE and this value is set (most commonly to an
+ *     empty string), then an extra option (see #empty_option above)
+ *     representing a "non-selection" is added with this as its value.
+ * - #multiple: (optional) Indicates whether one or more options can be
+ *   selected. Defaults to FALSE.
+ * - #default_value: Must be NULL or not set in case there is no value for the
+ *   element yet, in which case a first default option is inserted by default.
+ *   Whether this first option is a valid option depends on whether the field
+ *   is #required or not.
+ * - #required: (optional) Whether the user needs to select an option (TRUE)
+ *   or not (FALSE). Defaults to FALSE.
+ * - #size: The size of the input element in characters.
+ *
+ * Usage example:
+ * @code
+ * $form['example_select'] = [
+ *   '#type' => 'select',
+ *   '#title' => $this->t('Select element'),
+ *   '#options' => [
+ *     '1' => $this->t('One'),
+ *     '2' => [
+ *       '2.1' => $this->t('Two point one'),
+ *       '2.2' => $this->t('Two point two'),
+ *     ],
+ *     '3' => $this->t('Three'),
+ *   ],
+ * ];
+ * @endcode
  *
  * @FormElement("select")
  */
@@ -53,31 +89,7 @@ class Select extends FormElement {
    * select lists.
    *
    * @param array $element
-   *   The form element to process. Properties used:
-   *   - #multiple: (optional) Indicates whether one or more options can be
-   *     selected. Defaults to FALSE.
-   *   - #default_value: Must be NULL or not set in case there is no value for the
-   *     element yet, in which case a first default option is inserted by default.
-   *     Whether this first option is a valid option depends on whether the field
-   *     is #required or not.
-   *   - #required: (optional) Whether the user needs to select an option (TRUE)
-   *     or not (FALSE). Defaults to FALSE.
-   *   - #empty_option: (optional) The label to show for the first default option.
-   *     By default, the label is automatically set to "- Select -" for a required
-   *     field and "- None -" for an optional field.
-   *   - #empty_value: (optional) The value for the first default option, which is
-   *     used to determine whether the user submitted a value or not.
-   *     - If #required is TRUE, this defaults to '' (an empty string).
-   *     - If #required is not TRUE and this value isn't set, then no extra option
-   *       is added to the select control, leaving the control in a slightly
-   *       illogical state, because there's no way for the user to select nothing,
-   *       since all user agents automatically preselect the first available
-   *       option. But people are used to this being the behavior of select
-   *       controls.
-   *       @todo Address the above issue in Drupal 8.
-   *     - If #required is not TRUE and this value is set (most commonly to an
-   *       empty string), then an extra option (see #empty_option above)
-   *       representing a "non-selection" is added with this as its value.
+   *   The form element to process.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The current state of the form.
    * @param array $complete_form

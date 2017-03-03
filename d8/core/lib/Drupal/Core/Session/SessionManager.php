@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Session\SessionManager.
- */
-
 namespace Drupal\Core\Session;
 
 use Drupal\Component\Utility\Crypt;
@@ -83,7 +78,7 @@ class SessionManager extends NativeSessionStorage implements SessionManagerInter
    *   The session metadata bag.
    * @param \Drupal\Core\Session\SessionConfigurationInterface $session_configuration
    *   The session configuration interface.
-   * @param \Symfony\Component\HttpFoundation\Session\Storage\Proxy\AbstractProxy|Symfony\Component\HttpFoundation\Session\Storage\Handler\NativeSessionHandler|\SessionHandlerInterface|NULL $handler
+   * @param \Symfony\Component\HttpFoundation\Session\Storage\Proxy\AbstractProxy|Symfony\Component\HttpFoundation\Session\Storage\Handler\NativeSessionHandler|\SessionHandlerInterface|null $handler
    *   The object to register as a PHP session handler.
    *   @see \Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage::setSaveHandler()
    */
@@ -262,7 +257,8 @@ class SessionManager extends NativeSessionStorage implements SessionManagerInter
     // Unset the session cookies.
     $session_name = $this->getName();
     $cookies = $this->requestStack->getCurrentRequest()->cookies;
-    if ($cookies->has($session_name)) {
+    // setcookie() can only be called when headers are not yet sent.
+    if ($cookies->has($session_name) && !headers_sent()) {
       $params = session_get_cookie_params();
       setcookie($session_name, '', REQUEST_TIME - 3600, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
       $cookies->remove($session_name);
@@ -331,8 +327,7 @@ class SessionManager extends NativeSessionStorage implements SessionManagerInter
    * Migrates the current session to a new session id.
    *
    * @param string $old_session_id
-   *   The old session id. The new session id is $this->getId() unless
-   *   $new_insecure_session_id is not empty.
+   *   The old session ID. The new session ID is $this->getId().
    */
   protected function migrateStoredSession($old_session_id) {
     $fields = array('sid' => Crypt::hashBase64($this->getId()));

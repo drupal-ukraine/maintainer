@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\node\Plugin\Action\StickyNode.
- */
-
 namespace Drupal\node\Plugin\Action;
 
 use Drupal\Core\Action\ActionBase;
@@ -25,8 +20,7 @@ class StickyNode extends ActionBase {
    * {@inheritdoc}
    */
   public function execute($entity = NULL) {
-    $entity->sticky = NODE_STICKY;
-    $entity->save();
+    $entity->setSticky(TRUE)->save();
   }
 
   /**

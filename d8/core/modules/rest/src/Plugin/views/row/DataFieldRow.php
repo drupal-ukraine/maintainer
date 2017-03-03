@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\rest\Plugin\views\row\DataFieldRow.
- */
-
 namespace Drupal\rest\Plugin\views\row;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -88,6 +83,10 @@ class DataFieldRow extends RowPluginBase {
 
     if ($fields = $this->view->display_handler->getOption('fields')) {
       foreach ($fields as $id => $field) {
+        // Don't show the field if it has been excluded.
+        if (!empty($field['exclude'])) {
+          continue;
+        }
         $form['field_options'][$id]['field'] = array(
           '#markup' => $id,
         );
@@ -138,17 +137,19 @@ class DataFieldRow extends RowPluginBase {
     $output = array();
 
     foreach ($this->view->field as $id => $field) {
-      // If this is not unknown and the raw output option has been set, just get
-      // the raw value.
-      if (($field->field_alias != 'unknown') && !empty($this->rawOutputOptions[$id])) {
-        $value = $field->sanitizeValue($field->getValue($row), 'xss_admin');
+      // If the raw output option has been set, just get the raw value.
+      if (!empty($this->rawOutputOptions[$id])) {
+        $value = $field->getValue($row);
       }
       // Otherwise, pass this through the field advancedRender() method.
       else {
         $value = $field->advancedRender($row);
       }
 
-      $output[$this->getFieldKeyAlias($id)] = $value;
+      // Omit excluded fields from the rendered output.
+      if (empty($field->options['exclude'])) {
+        $output[$this->getFieldKeyAlias($id)] = $value;
+      }
     }
 
     return $output;

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\responsive_image\Unit\ResponsiveImageStyleConfigEntityUnitTest.
- */
-
 namespace Drupal\Tests\responsive_image\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
@@ -44,8 +39,8 @@ class ResponsiveImageStyleConfigEntityUnitTest extends UnitTestCase {
   protected function setUp() {
     $this->entityType = $this->getMock('\Drupal\Core\Entity\EntityTypeInterface');
     $this->entityType->expects($this->any())
-       ->method('getProvider')
-       ->will($this->returnValue('responsive_image'));
+      ->method('getProvider')
+      ->will($this->returnValue('responsive_image'));
 
     $this->entityManager = $this->getMock('\Drupal\Core\Entity\EntityManagerInterface');
     $this->entityManager->expects($this->any())

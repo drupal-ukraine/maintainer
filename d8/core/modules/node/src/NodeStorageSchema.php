@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\node\NodeStorageSchema.
- */
-
 namespace Drupal\node;
 
 use Drupal\Core\Entity\ContentEntityTypeInterface;
@@ -24,7 +19,6 @@ class NodeStorageSchema extends SqlContentEntityStorageSchema {
 
     $schema['node_field_data']['indexes'] += array(
       'node__frontpage' => array('promote', 'status', 'sticky', 'created'),
-      'node__status_type' => array('status', 'type', 'nid'),
       'node__title_type' => array('title', array('type', 4)),
     );
 

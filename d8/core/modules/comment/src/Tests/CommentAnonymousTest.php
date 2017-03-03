@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\comment\Tests\CommentAnonymousTest.
- */
-
 namespace Drupal\comment\Tests;
 
 use Drupal\user\RoleInterface;
@@ -69,6 +64,16 @@ class CommentAnonymousTest extends CommentTestBase {
     // Post anonymous comment without contact info.
     $anonymous_comment1 = $this->postComment($this->node, $this->randomMachineName(), $this->randomMachineName());
     $this->assertTrue($this->commentExists($anonymous_comment1), 'Anonymous comment without contact info found.');
+
+    // Ensure anonymous users cannot post in the name of registered users.
+    $edit = array(
+      'name' => $this->adminUser->getUsername(),
+      'comment_body[0][value]' => $this->randomMachineName(),
+    );
+    $this->drupalPostForm('comment/reply/node/' . $this->node->id() . '/comment', $edit, t('Save'));
+    $this->assertRaw(t('The name you used (%name) belongs to a registered user.', [
+      '%name' => $this->adminUser->getUsername(),
+    ]));
 
     // Allow contact info.
     $this->drupalLogin($this->adminUser);
@@ -178,7 +183,7 @@ class CommentAnonymousTest extends CommentTestBase {
     ));
     $this->drupalGet('node/' . $this->node->id());
     $this->assertPattern('@<h2[^>]*>Comments</h2>@', 'Comments were displayed.');
-    $this->assertLink('Log in', 1, 'Link to log in was found.');
+    $this->assertLink('Log in', 1, 'Link to login was found.');
     $this->assertLink('register', 1, 'Link to register was found.');
 
     user_role_change_permissions(RoleInterface::ANONYMOUS_ID, array(

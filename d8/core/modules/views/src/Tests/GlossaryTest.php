@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Tests\GlossaryTest.
- */
-
 namespace Drupal\views\Tests;
 
 use Drupal\Component\Utility\Unicode;
@@ -100,6 +95,7 @@ class GlossaryTest extends ViewTestBase {
         'node_list',
         'user:0',
         'user_list',
+        'http_response',
         'rendered',
         // FinishResponseSubscriber adds this cache tag to responses that have the
         // 'user.permissions' cache context for anonymous users.

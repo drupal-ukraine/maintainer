@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\EventSubscriber\MenuRouterRebuildSubscriber.
- */
-
 namespace Drupal\Core\EventSubscriber;
 
 use Drupal\Core\Cache\Cache;
@@ -68,7 +63,7 @@ class MenuRouterRebuildSubscriber implements EventSubscriberInterface {
         db_ignore_replica();
       }
       catch (\Exception $e) {
-        $transaction->rollback();
+        $transaction->rollBack();
         watchdog_exception('menu', $e);
       }
 

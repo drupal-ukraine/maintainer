@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\ViewsDataHelper.
- */
-
 namespace Drupal\views;
 
 use Drupal\Component\Utility\Unicode;
@@ -42,7 +37,7 @@ class ViewsDataHelper {
   /**
    * Fetches a list of all fields available for a given base type.
    *
-   * @param (array|string) $base
+   * @param array|string $base
    *   A list or a single base_table, for example node.
    * @param string $type
    *   The handler type, for example field or filter.
@@ -114,8 +109,17 @@ class ViewsDataHelper {
                 elseif (!empty($table_data['table'][$string])) {
                   $strings[$field][$key][$string] = $table_data['table'][$string];
                 }
+                // We don't have any help provided for this field. If a better
+                // description should be used for the Views UI you use
+                // hook_views_data_alter() in module.views.inc or implement a
+                // custom entity views_data handler.
+                // @see hook_views_data_alter()
+                // @see \Drupal\node\NodeViewsData
+                elseif ($string == 'help') {
+                  $strings[$field][$key][$string] = '';
+                }
                 else {
-                  if ($string != 'base' && $string != 'base') {
+                  if ($string != 'base') {
                     $strings[$field][$key][$string] = SafeMarkup::format("Error: missing @component", array('@component' => $string));
                   }
                 }
@@ -186,4 +190,3 @@ class ViewsDataHelper {
   }
 
 }
-

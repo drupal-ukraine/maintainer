@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Component\DependencyInjection\Dumper\OptimizedPhpArrayDumper.
- */
-
 namespace Drupal\Component\DependencyInjection\Dumper;
 
+use Drupal\Component\Utility\Crypt;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Parameter;
@@ -65,6 +61,7 @@ class OptimizedPhpArrayDumper extends Dumper {
    */
   public function getArray() {
     $definition = array();
+    $this->aliases = $this->getAliases();
     $definition['aliases'] = $this->getAliases();
     $definition['parameters'] = $this->getParameters();
     $definition['services'] = $this->getServiceDefinitions();
@@ -252,6 +249,11 @@ class OptimizedPhpArrayDumper extends Dumper {
       }
     }
 
+    // By default services are shared, so just provide the flag, when needed.
+    if ($definition->isShared() === FALSE) {
+      $service['shared'] = $definition->isShared();
+    }
+
     if (($decorated = $definition->getDecoratedService()) !== NULL) {
       throw new InvalidArgumentException("The 'decorated' definition is not supported by the Drupal 8 run-time container. The Container Builder should have resolved that during the DecoratorServicePass compiler pass.");
     }
@@ -372,7 +374,7 @@ class OptimizedPhpArrayDumper extends Dumper {
   protected function getPrivateServiceCall($id, Definition $definition, $shared = FALSE) {
     $service_definition = $this->getServiceDefinition($definition);
     if (!$id) {
-      $hash = hash('sha1', serialize($service_definition));
+      $hash = Crypt::hashBase64(serialize($service_definition));
       $id = 'private__' . $hash;
     }
     return (object) array(
@@ -439,7 +441,7 @@ class OptimizedPhpArrayDumper extends Dumper {
    *
    * @param string $id
    *   The ID of the service to get a reference for.
-   * @param \Symfony\Component\DependencyInjection\Reference|NULL $reference
+   * @param \Symfony\Component\DependencyInjection\Reference|null $reference
    *   (optional) The reference object to process; needed to get the invalid
    *   behavior value.
    *
@@ -454,6 +456,9 @@ class OptimizedPhpArrayDumper extends Dumper {
     }
 
     // Private shared service.
+    if (isset($this->aliases[$id])) {
+      $id = $this->aliases[$id];
+    }
     $definition = $this->container->getDefinition($id);
     if (!$definition->isPublic()) {
       // The ContainerBuilder does not share a private service, but this means a

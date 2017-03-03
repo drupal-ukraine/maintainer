@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\file\Tests\FileFieldRSSContentTest.
- */
-
 namespace Drupal\file\Tests;
 
 use Drupal\file\Entity\File;
@@ -30,15 +25,8 @@ class FileFieldRSSContentTest extends FileFieldTestBase {
     $node_storage = $this->container->get('entity.manager')->getStorage('node');
     $field_name = strtolower($this->randomMachineName());
     $type_name = 'article';
-    $field_settings = array(
-      'display_field' => '1',
-      'display_default' => '1',
-    );
-    $field_settings = array(
-      'description_field' => '1',
-    );
-    $widget_settings = array();
-    $this->createFileField($field_name, 'node', $type_name, $field_settings, $field_settings, $widget_settings);
+
+    $this->createFileField($field_name, 'node', $type_name);
 
     // RSS display must be added manually.
     $this->drupalGet("admin/structure/types/manage/$type_name/display");
@@ -49,7 +37,10 @@ class FileFieldRSSContentTest extends FileFieldTestBase {
 
     // Change the format to 'RSS enclosure'.
     $this->drupalGet("admin/structure/types/manage/$type_name/display/rss");
-    $edit = array("fields[$field_name][type]" => 'file_rss_enclosure');
+    $edit = array(
+      "fields[$field_name][type]" => 'file_rss_enclosure',
+      "fields[$field_name][region]" => 'content',
+    );
     $this->drupalPostForm(NULL, $edit, t('Save'));
 
     // Create a new node with a file field set. Promote to frontpage
@@ -68,12 +59,13 @@ class FileFieldRSSContentTest extends FileFieldTestBase {
     // Check that the RSS enclosure appears in the RSS feed.
     $this->drupalGet('rss.xml');
     $uploaded_filename = str_replace('public://', '', $node_file->getFileUri());
-    $test_element = sprintf(
-      '<enclosure url="%s" length="%s" type="%s" />',
+    $selector = sprintf(
+      'enclosure[url="%s"][length="%s"][type="%s"]',
       file_create_url("public://$uploaded_filename", array('absolute' => TRUE)),
       $node_file->getSize(),
       $node_file->getMimeType()
     );
-    $this->assertRaw($test_element, 'File field RSS enclosure is displayed when viewing the RSS feed.');
+    $this->assertTrue(!empty($this->cssSelect($selector)), 'File field RSS enclosure is displayed when viewing the RSS feed.');
   }
+
 }

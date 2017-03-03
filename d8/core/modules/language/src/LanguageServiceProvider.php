@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\language\LanguageServiceProvider.
- */
-
 namespace Drupal\language;
 
 use Drupal\Core\Config\BootstrapConfigStorageFactory;
@@ -59,13 +54,6 @@ class LanguageServiceProvider extends ServiceProviderBase {
       $container->setParameter('language.default_values', $default_language_values);
     }
 
-    // For monolingual sites, we explicitly set the default language for the
-    // language config override service as there is no language negotiation.
-    if (!$this->isMultilingual()) {
-      $container->getDefinition('language.config_factory_override')
-        ->addMethodCall('setLanguageFromDefault', array(new Reference('language.default')));
-    }
-
   }
 
   /**
@@ -105,4 +93,5 @@ class LanguageServiceProvider extends ServiceProviderBase {
     }
     return FALSE;
   }
+
 }

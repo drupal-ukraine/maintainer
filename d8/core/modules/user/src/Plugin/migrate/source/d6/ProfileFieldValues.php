@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\user\Plugin\migrate\source\d6\ProfileFieldValues.
- */
-
 namespace Drupal\user\Plugin\migrate\source\d6;
 
 use Drupal\migrate\Row;
@@ -26,7 +21,7 @@ class ProfileFieldValues extends DrupalSqlBase {
   public function query() {
     $query = $this->select('profile_values', 'pv')
       ->distinct()
-      ->fields('pv', array('fid', 'uid'));
+      ->fields('pv', array('uid'));
 
     return $query;
   }

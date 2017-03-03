@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views_ui\Tests\DefaultViewsTest.
- */
-
 namespace Drupal\views_ui\Tests;
 
 use Drupal\Core\Url;
@@ -142,6 +137,23 @@ class DefaultViewsTest extends UITestBase {
     $this->drupalGet($edit_href);
     $this->assertResponse(404);
     $this->assertText('Page not found');
+
+    // Delete all duplicated Glossary views.
+    $this->drupalGet('admin/structure/views');
+    $this->clickViewsOperationLink(t('Delete'), 'duplicate_of_glossary');
+    // Submit the confirmation form.
+    $this->drupalPostForm(NULL, array(), t('Delete'));
+
+    $this->drupalGet('glossary');
+    $this->assertResponse(200);
+
+    $this->drupalGet('admin/structure/views');
+    $this->clickViewsOperationLink(t('Delete'), $random_name);
+    // Submit the confirmation form.
+    $this->drupalPostForm(NULL, array(), t('Delete'));
+    $this->drupalGet('glossary');
+    $this->assertResponse(404);
+    $this->assertText('Page not found');
   }
 
   /**
@@ -149,10 +161,11 @@ class DefaultViewsTest extends UITestBase {
    */
   function testSplitListing() {
     // Build a re-usable xpath query.
-    $xpath = '//div[@id="views-entity-list"]/div[@class = :status]/table//tr[@title = :title]';
+    $xpath = '//div[@id="views-entity-list"]/div[@class = :status]/table//td/text()[contains(., :title)]';
+
     $arguments = array(
       ':status' => 'views-list-section enabled',
-      ':title' => t('Machine name: test_view_status'),
+      ':title' => 'test_view_status',
     );
 
     $this->drupalGet('admin/structure/views');

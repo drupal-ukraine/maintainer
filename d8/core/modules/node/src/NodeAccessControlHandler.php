@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\node\NodeAccessControlHandler.
- */
-
 namespace Drupal\node;
 
 use Drupal\Core\Access\AccessResult;
@@ -67,10 +62,11 @@ class NodeAccessControlHandler extends EntityAccessControlHandler implements Nod
       return $return_as_object ? $result : $result->isAllowed();
     }
     if (!$account->hasPermission('access content')) {
-      $result = AccessResult::forbidden()->cachePerPermissions();
+      $result = AccessResult::forbidden("The 'access content' permission is required.")->cachePerPermissions();
       return $return_as_object ? $result : $result->isAllowed();
     }
     $result = parent::access($entity, $operation, $account, TRUE)->cachePerPermissions();
+
     return $return_as_object ? $result : $result->isAllowed();
   }
 
@@ -105,7 +101,7 @@ class NodeAccessControlHandler extends EntityAccessControlHandler implements Nod
 
     // Check if authors can view their own unpublished nodes.
     if ($operation === 'view' && !$status && $account->hasPermission('view own unpublished content') && $account->isAuthenticated() && $account->id() == $uid) {
-      return AccessResult::allowed()->cachePerPermissions()->cachePerUser()->cacheUntilEntityChanges($node);
+      return AccessResult::allowed()->cachePerPermissions()->cachePerUser()->addCacheableDependency($node);
     }
 
     // Evaluate node grants.

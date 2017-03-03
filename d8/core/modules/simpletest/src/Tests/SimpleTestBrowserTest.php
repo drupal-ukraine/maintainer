@@ -1,14 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\simpletest\Tests\SimpleTestBrowserTest.
- */
-
 namespace Drupal\simpletest\Tests;
 
 use Drupal\Core\Url;
 use Drupal\simpletest\WebTestBase;
+use Drupal\Tests\simpletest\Functional\ThroughUITest;
 
 /**
  * Tests the Simpletest UI internal browser.
@@ -24,7 +20,7 @@ class SimpleTestBrowserTest extends WebTestBase {
    */
   public static $modules = array('simpletest', 'test_page_test');
 
-  public function setUp() {
+  protected function setUp() {
     parent::setUp();
     // Create and log in an admin user.
     $this->drupalLogin($this->drupalCreateUser(array('administer unit tests')));
@@ -91,10 +87,10 @@ class SimpleTestBrowserTest extends WebTestBase {
     $this->drupalLogout();
 
     $system_path = $base_url . '/' . drupal_get_path('module', 'system');
-    $HTTP_path = $system_path .'/tests/http.php/user/login';
-    $https_path = $system_path .'/tests/https.php/user/login';
+    $HTTP_path = $system_path . '/tests/http.php/user/login';
+    $https_path = $system_path . '/tests/https.php/user/login';
     // Generate a valid simpletest User-Agent to pass validation.
-    $this->assertTrue(preg_match('/simpletest\d+/', $this->databasePrefix, $matches), 'Database prefix contains simpletest prefix.');
+    $this->assertTrue(preg_match('/test\d+/', $this->databasePrefix, $matches), 'Database prefix contains test prefix.');
     $test_ua = drupal_generate_test_ua($matches[0]);
     $this->additionalCurlOptions = array(CURLOPT_USERAGENT => $test_ua);
 
@@ -132,11 +128,11 @@ class SimpleTestBrowserTest extends WebTestBase {
 
     $tests = array(
       // A KernelTestBase test.
-      'Drupal\system\Tests\DrupalKernel\DrupalKernelTest',
+      'Drupal\KernelTests\KernelTestBaseTest',
       // A PHPUnit unit test.
       'Drupal\Tests\action\Unit\Menu\ActionLocalTasksTest',
       // A PHPUnit functional test.
-      'Drupal\Tests\simpletest\Functional\BrowserTestBaseTest',
+      ThroughUITest::class,
     );
 
     foreach ($tests as $test) {

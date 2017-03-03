@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\filter\Plugin\FilterBase.
- */
-
 namespace Drupal\filter\Plugin;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -19,13 +14,6 @@ use Drupal\Core\Plugin\PluginBase;
  * @see plugin_api
  */
 abstract class FilterBase extends PluginBase implements FilterInterface {
-
-  /**
-   * The plugin ID of this filter.
-   *
-   * @var string
-   */
-  protected $plugin_id;
 
   /**
    * The name of the provider that owns this filter.
@@ -54,13 +42,6 @@ abstract class FilterBase extends PluginBase implements FilterInterface {
    * @var array
    */
   public $settings = array();
-
-  /**
-   * A collection of all filters this filter participates in.
-   *
-   * @var \Drupal\filter\FilterPluginCollection
-   */
-  protected $collection;
 
   /**
    * {@inheritdoc}

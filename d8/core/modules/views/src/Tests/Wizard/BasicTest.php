@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Tests\Wizard\BasicTest.
- */
-
 namespace Drupal\views\Tests\Wizard;
 
 use Drupal\Component\Serialization\Json;
@@ -31,7 +26,7 @@ class BasicTest extends WizardTestBase {
 
     // Check if we can access the main views admin page.
     $this->drupalGet('admin/structure/views');
-    $this->assertText(t('Add new view'));
+    $this->assertText(t('Add view'));
 
     // Create a simple and not at all useful view.
     $view1 = array();
@@ -85,7 +80,7 @@ class BasicTest extends WizardTestBase {
     $elements = $this->cssSelect('link[href="' . Url::fromRoute('view.' . $view2['id'] . '.feed_1', [], ['absolute' => TRUE])->toString() . '"]');
     $this->assertEqual(count($elements), 1, 'Feed found.');
     $this->drupalGet($view2['page[feed_properties][path]']);
-    $this->assertRaw('<rss version="2.0"');
+    $this->assertTrue(!empty($this->cssSelect('rss[version="2.0"]')));
     // The feed should have the same title and nodes as the page.
     $this->assertText($view2['page[title]']);
     $this->assertRaw($node1->url('canonical', ['absolute' => TRUE]));
@@ -176,29 +171,9 @@ class BasicTest extends WizardTestBase {
   }
 
   /**
-   * Tests the actual wizard form.
-   *
-   * @see \Drupal\views_ui\ViewAddForm::form()
-   */
-  public function testWizardForm() {
-    $this->drupalGet('admin/structure/views/add');
-
-    $result = $this->xpath('//small[@id = "edit-label-machine-name-suffix"]');
-    $this->assertTrue(count($result), 'Ensure that the machine name is applied to the name field.');
-
-    $this->drupalPostAjaxForm(NULL, array('show[wizard_key]' => 'users'), 'show[wizard_key]');
-    $this->assertNoFieldByName('show[type]', NULL, 'The "of type" filter is not added for users.');
-    $this->drupalPostAjaxForm(NULL, array('show[wizard_key]' => 'node'), 'show[wizard_key]');
-    $this->assertNoFieldByName('show[type]', 'all', 'The "of type" filter is not added for nodes when there are no node types.');
-    $this->drupalCreateContentType(array('type' => 'page'));
-    $this->drupalPostAjaxForm(NULL, array('show[wizard_key]' => 'node'), 'show[wizard_key]');
-    $this->assertFieldByName('show[type]', 'all', 'The "of type" filter is added for nodes when there is at least one node type.');
-  }
-
-  /**
    * Tests default plugin values are populated from the wizard form.
    *
-   * @see \Drupal\views\Plugin\views\display\DisplayPluginBase::mergeDefaults().
+   * @see \Drupal\views\Plugin\views\display\DisplayPluginBase::mergeDefaults()
    */
   public function testWizardDefaultValues() {
     $random_id = strtolower($this->randomMachineName(16));
@@ -212,7 +187,7 @@ class BasicTest extends WizardTestBase {
 
     // Make sure the plugin types that should not have empty options don't have.
     // Test against all values is unit tested.
-    // @see \Drupal\views\Tests\Plugin\DisplayKernelTest
+    // @see \Drupal\Tests\views\Kernel\Plugin\DisplayKernelTest
     $view = Views::getView($random_id);
     $displays = $view->storage->get('display');
 

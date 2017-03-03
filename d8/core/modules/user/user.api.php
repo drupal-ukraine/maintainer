@@ -107,15 +107,18 @@ function hook_user_cancel_methods_alter(&$methods) {
  *
  * Called by $account->getDisplayName() to allow modules to alter the username
  * that is displayed. Can be used to ensure user privacy in situations where
- * $account->name is too revealing.
+ * $account->getDisplayName() is too revealing.
  *
- * @param string $name
- *   The string that $account->getDisplayName() will return.
+ * @param string|Drupal\Component\Render\MarkupInterface $name
+ *   The username that is displayed for a user. If a hook implementation changes
+ *   this to an object implementing MarkupInterface it is the responsibility of
+ *   the implementation to ensure the user's name is escaped properly. String
+ *   values will be autoescaped.
+ * @param \Drupal\Core\Session\AccountInterface $account
+ *   The user object on which the operation is being performed.
  *
- * @param $account
- *   The account object passed to user_format_name().
- *
- * @see $account->getDisplayName()
+ * @see \Drupal\Core\Session\AccountInterface::getDisplayName()
+ * @see sanitization
  */
 function hook_user_format_name_alter(&$name, $account) {
   // Display the user's uid instead of name.

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\ComposerIntegrationTest.
- */
-
 namespace Drupal\Tests;
 
 /**
@@ -49,10 +44,27 @@ class ComposerIntegrationTest extends UnitTestCase {
     return [
       $this->root,
       $this->root . '/core',
+      $this->root . '/core/lib/Drupal/Component/Annotation',
+      $this->root . '/core/lib/Drupal/Component/Assertion',
+      $this->root . '/core/lib/Drupal/Component/Bridge',
+      $this->root . '/core/lib/Drupal/Component/Datetime',
+      $this->root . '/core/lib/Drupal/Component/DependencyInjection',
+      $this->root . '/core/lib/Drupal/Component/Diff',
+      $this->root . '/core/lib/Drupal/Component/Discovery',
+      $this->root . '/core/lib/Drupal/Component/EventDispatcher',
+      $this->root . '/core/lib/Drupal/Component/FileCache',
+      $this->root . '/core/lib/Drupal/Component/FileSystem',
       $this->root . '/core/lib/Drupal/Component/Gettext',
+      $this->root . '/core/lib/Drupal/Component/Graph',
+      $this->root . '/core/lib/Drupal/Component/HttpFoundation',
+      $this->root . '/core/lib/Drupal/Component/PhpStorage',
       $this->root . '/core/lib/Drupal/Component/Plugin',
       $this->root . '/core/lib/Drupal/Component/ProxyBuilder',
+      $this->root . '/core/lib/Drupal/Component/Render',
+      $this->root . '/core/lib/Drupal/Component/Serialization',
+      $this->root . '/core/lib/Drupal/Component/Transliteration',
       $this->root . '/core/lib/Drupal/Component/Utility',
+      $this->root . '/core/lib/Drupal/Component/Uuid',
     ];
   }
 
@@ -62,10 +74,18 @@ class ComposerIntegrationTest extends UnitTestCase {
   public function testComposerJson() {
     foreach ($this->getPaths() as $path) {
       $json = file_get_contents($path . '/composer.json');
-
       $result = json_decode($json);
       $this->assertNotNull($result, $this->getErrorMessages()[json_last_error()]);
     }
+  }
+
+  /**
+   * Tests composer.lock content-hash.
+   */
+  public function testComposerLockHash() {
+    $content_hash = self::getContentHash(file_get_contents($this->root . '/composer.json'));
+    $lock = json_decode(file_get_contents($this->root . '/composer.lock'), TRUE);
+    $this->assertSame($content_hash, $lock['content-hash']);
   }
 
   /**
@@ -104,5 +124,51 @@ class ComposerIntegrationTest extends UnitTestCase {
       );
     }
   }
+
+  // @codingStandardsIgnoreStart
+  /**
+   * The following method is copied from \Composer\Package\Locker.
+   *
+   * @see https://github.com/composer/composer
+   */
+  /**
+   * Returns the md5 hash of the sorted content of the composer file.
+   *
+   * @param string $composerFileContents The contents of the composer file.
+   *
+   * @return string
+   */
+  protected static function getContentHash($composerFileContents)
+  {
+    $content = json_decode($composerFileContents, true);
+
+    $relevantKeys = array(
+      'name',
+      'version',
+      'require',
+      'require-dev',
+      'conflict',
+      'replace',
+      'provide',
+      'minimum-stability',
+      'prefer-stable',
+      'repositories',
+      'extra',
+    );
+
+    $relevantContent = array();
+
+    foreach (array_intersect($relevantKeys, array_keys($content)) as $key) {
+      $relevantContent[$key] = $content[$key];
+    }
+    if (isset($content['config']['platform'])) {
+      $relevantContent['config']['platform'] = $content['config']['platform'];
+    }
+
+    ksort($relevantContent);
+
+    return md5(json_encode($relevantContent));
+  }
+  // @codingStandardsIgnoreEnd
 
 }

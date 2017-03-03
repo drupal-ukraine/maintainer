@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\field\Plugin\migrate\source\d6\FieldInstancePerFormDisplay.
- */
-
 namespace Drupal\field\Plugin\migrate\source\d6;
 
 use Drupal\migrate_drupal\Plugin\migrate\source\DrupalSqlBase;
@@ -26,8 +21,6 @@ class FieldInstancePerFormDisplay extends DrupalSqlBase {
     $rows = array();
     $result = $this->prepareQuery()->execute();
     while ($field_row = $result->fetchAssoc()) {
-      $field_row['display_settings'] = unserialize($field_row['display_settings']);
-      $field_row['widget_settings'] = unserialize($field_row['widget_settings']);
       $bundle = $field_row['type_name'];
       $field_name = $field_row['field_name'];
 
@@ -39,7 +32,8 @@ class FieldInstancePerFormDisplay extends DrupalSqlBase {
       $rows[$index]['module'] = $field_row['module'];
       $rows[$index]['weight'] = $field_row['weight'];
       $rows[$index]['widget_type'] = $field_row['widget_type'];
-      $rows[$index]['widget_settings'] = $field_row['widget_settings'];
+      $rows[$index]['widget_settings'] = unserialize($field_row['widget_settings']);
+      $rows[$index]['display_settings'] = unserialize($field_row['display_settings']);
     }
 
     return new \ArrayIterator($rows);
@@ -67,7 +61,7 @@ class FieldInstancePerFormDisplay extends DrupalSqlBase {
         'module',
       ));
     $query->join('content_node_field', 'cnf', 'cnfi.field_name = cnf.field_name');
-    $query->orderBy('weight');
+    $query->orderBy('cnfi.weight');
 
     return $query;
   }

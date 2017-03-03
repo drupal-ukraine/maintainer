@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\area\Text.
- */
-
 namespace Drupal\views\Plugin\views\area;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -46,6 +41,17 @@ class Text extends TokenizeAreaPluginBase {
       '#format' => isset($this->options['content']['format']) ? $this->options['content']['format'] : filter_default_format(),
       '#editor' => FALSE,
     );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function preQuery() {
+    $content = $this->options['content']['value'];
+    // Check for tokens that require a total row count.
+    if (strpos($content, '[view:page-count]') !== FALSE || strpos($content, '[view:total-rows]') !== FALSE) {
+      $this->view->get_total_rows = TRUE;
+    }
   }
 
   /**

@@ -6,7 +6,6 @@
  */
 
 use Drupal\node\NodeInterface;
-use Drupal\node\Entity\Node;
 
 /**
  * Updates all nodes in the passed-in array with the passed-in field values.
@@ -51,12 +50,13 @@ function node_mass_update(array $nodes, array $updates, $langcode = NULL, $load 
     batch_set($batch);
   }
   else {
+    $storage = \Drupal::entityTypeManager()->getStorage('node');
     if ($load && !$revisions) {
-      $nodes = Node::loadMultiple($nodes);
+      $nodes = $storage->loadMultiple($nodes);
     }
     foreach ($nodes as $node) {
       if ($load && $revisions) {
-        $node = entity_revision_load('node', $node);
+        $node = $storage->loadRevision($node);
       }
       _node_mass_update_helper($node, $updates, $langcode);
     }
@@ -102,16 +102,19 @@ function _node_mass_update_helper(NodeInterface $node, array $updates, $langcode
  *   An array of node IDs.
  * @param array $updates
  *   Associative array of updates.
+ * @param string $langcode
+ *   The language updates should be applied to. If none is specified all
+ *   available languages are processed.
  * @param bool $load
  *   TRUE if $nodes contains an array of node IDs to be loaded, FALSE if it
  *   contains fully loaded nodes.
  * @param bool $revisions
  *   (optional) TRUE if $nodes contains an array of revision IDs instead of
  *   node IDs. Defaults to FALSE; will be ignored if $load is FALSE.
- * @param array $context
+ * @param array|\ArrayAccess $context.
  *   An array of contextual key/values.
  */
-function _node_mass_update_batch_process(array $nodes, array $updates, $load, $revisions, array &$context) {
+function _node_mass_update_batch_process(array $nodes, array $updates, $langcode, $load, $revisions, &$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['max'] = count($nodes);
@@ -119,15 +122,16 @@ function _node_mass_update_batch_process(array $nodes, array $updates, $load, $r
   }
 
   // Process nodes by groups of 5.
+  $storage = \Drupal::entityTypeManager()->getStorage('node');
   $count = min(5, count($context['sandbox']['nodes']));
   for ($i = 1; $i <= $count; $i++) {
     // For each nid, load the node, reset the values, and save it.
     $node = array_shift($context['sandbox']['nodes']);
     if ($load) {
       $node = $revisions ?
-        entity_revision_load('node', $node) : Node::load($node);
+        $storage->loadRevision($node) : $storage->load($node);
     }
-    $node = _node_mass_update_helper($node, $updates);
+    $node = _node_mass_update_helper($node, $updates, $langcode);
 
     // Store result for post-processing in the finished callback.
     $context['results'][] = \Drupal::l($node->label(), $node->urlInfo());

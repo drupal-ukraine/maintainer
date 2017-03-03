@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Asset\CssOptimizer.
- */
-
 namespace Drupal\Core\Asset;
 
 use Drupal\Component\Utility\Unicode;
@@ -25,19 +20,14 @@ class CssOptimizer implements AssetOptimizerInterface {
    * {@inheritdoc}
    */
   public function optimize(array $css_asset) {
-    if (!in_array($css_asset['type'], array('file', 'inline'))) {
-      throw new \Exception('Only file or inline CSS assets can be optimized.');
+    if ($css_asset['type'] != 'file') {
+      throw new \Exception('Only file CSS assets can be optimized.');
     }
-    if ($css_asset['type'] === 'file' && !$css_asset['preprocess']) {
+    if (!$css_asset['preprocess']) {
       throw new \Exception('Only file CSS assets with preprocessing enabled can be optimized.');
     }
 
-    if ($css_asset['type'] === 'file') {
-      return $this->processFile($css_asset);
-    }
-    else {
-      return $this->processCss($css_asset['data'], $css_asset['preprocess']);
-    }
+    return $this->processFile($css_asset);
   }
 
   /**
@@ -173,7 +163,7 @@ class CssOptimizer implements AssetOptimizerInterface {
     $directory = dirname($filename);
     // If the file is in the current directory, make sure '.' doesn't appear in
     // the url() path.
-    $directory = $directory == '.' ? '' : $directory .'/';
+    $directory = $directory == '.' ? '' : $directory . '/';
 
     // Alter all internal url() paths. Leave external paths alone. We don't need
     // to normalize absolute paths here because that will be done later.
@@ -215,8 +205,10 @@ class CssOptimizer implements AssetOptimizerInterface {
       // whitespace.
       // @see http://php.net/manual/regexp.reference.subpatterns.php
       $contents = preg_replace('<
+        # Do not strip any space from within single or double quotes
+          (' . $double_quot . '|' . $single_quot . ')
         # Strip leading and trailing whitespace.
-          \s*([@{};,])\s*
+        | \s*([@{};,])\s*
         # Strip only leading whitespace from:
         # - Closing parenthesis: Retain "@media (bar) and foo".
         | \s+([\)])
@@ -224,11 +216,11 @@ class CssOptimizer implements AssetOptimizerInterface {
         # - Opening parenthesis: Retain "@media (bar) and foo".
         # - Colon: Retain :pseudo-selectors.
         | ([\(:])\s+
-      >xS',
-        // Only one of the three capturing groups will match, so its reference
+      >xSs',
+        // Only one of the four capturing groups will match, so its reference
         // will contain the wanted value and the references for the
         // two non-matching groups will be replaced with empty strings.
-        '$1$2$3',
+        '$1$2$3$4',
         $contents
       );
       // End the file with a new line.
@@ -246,13 +238,13 @@ class CssOptimizer implements AssetOptimizerInterface {
   /**
    * Prefixes all paths within a CSS file for processFile().
    *
-   * @param array $matches
-   *   An array of matches by a preg_replace_callback() call that scans for
-   *   url() references in CSS files, except for external or absolute ones.
-   *
    * Note: the only reason this method is public is so color.module can call it;
    * it is not on the AssetOptimizerInterface, so future refactorings can make
    * it protected.
+   *
+   * @param array $matches
+   *   An array of matches by a preg_replace_callback() call that scans for
+   *   url() references in CSS files, except for external or absolute ones.
    *
    * @return string
    *   The file path.
@@ -265,7 +257,7 @@ class CssOptimizer implements AssetOptimizerInterface {
       $last = $path;
       $path = preg_replace('`(^|/)(?!\.\./)([^/]+)/\.\./`', '$1', $path);
     }
-    return 'url(' . file_create_url($path) . ')';
+    return 'url(' . file_url_transform_relative(file_create_url($path)) . ')';
   }
 
 }

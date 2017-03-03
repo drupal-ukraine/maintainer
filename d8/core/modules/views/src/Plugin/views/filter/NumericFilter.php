@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\filter\NumericFilter.
- */
-
 namespace Drupal\views\Plugin\views\filter;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -87,7 +82,7 @@ class NumericFilter extends FilterPluginBase {
       'regular_expression' => array(
         'title' => $this->t('Regular expression'),
         'short' => $this->t('regex'),
-        'method' => 'op_regex',
+        'method' => 'opRegex',
         'values' => 1,
       ),
     );
@@ -199,9 +194,10 @@ class NumericFilter extends FilterPluginBase {
     if ($which == 'all' || $which == 'minmax') {
       $form['value']['min'] = array(
         '#type' => 'textfield',
-        '#title' => !$exposed ? $this->t('Min') : '',
+        '#title' => !$exposed ? $this->t('Min') : $this->exposedInfo()['label'],
         '#size' => 30,
         '#default_value' => $this->value['min'],
+        '#description' => !$exposed ? '' : $this->exposedInfo()['description']
       );
       $form['value']['max'] = array(
         '#type' => 'textfield',
@@ -252,7 +248,7 @@ class NumericFilter extends FilterPluginBase {
       $this->query->addWhere($this->options['group'], $field, array($this->value['min'], $this->value['max']), 'BETWEEN');
     }
     else {
-      $this->query->addWhere($this->options['group'], db_or()->condition($field, $this->value['min'], '<=')->condition($field, $this->value['max'], '>='));
+      $this->query->addWhere($this->options['group'], $field, array($this->value['min'], $this->value['max']), 'NOT BETWEEN');
     }
   }
 
@@ -278,7 +274,7 @@ class NumericFilter extends FilterPluginBase {
    *   The expression pointing to the queries field, for example "foo.bar".
    */
   protected function opRegex($field) {
-    $this->query->addWhere($this->options['group'], $field, $this->value, 'REGEXP');
+    $this->query->addWhere($this->options['group'], $field, $this->value['value'], 'REGEXP');
   }
 
   public function adminSummary() {

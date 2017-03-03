@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\EventSubscriber\RouteSubscriber.
- */
-
 namespace Drupal\views\EventSubscriber;
 
 use Drupal\Core\Entity\EntityManagerInterface;
@@ -161,7 +156,11 @@ class RouteSubscriber extends RouteSubscriberBase {
   }
 
   /**
-   * {@inheritdoc}
+   * Stores the new route names after they have been rebuilt.
+   *
+   * Callback for the RoutingEvents::FINISHED event.
+   *
+   * @see \Drupal\views\EventSubscriber::getSubscribedEvents()
    */
   public function routeRebuildFinished() {
     $this->reset();

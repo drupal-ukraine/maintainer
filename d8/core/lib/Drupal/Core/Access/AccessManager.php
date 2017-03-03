@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Access\AccessManager.
- */
-
 namespace Drupal\Core\Access;
 
 use Drupal\Core\ParamConverter\ParamConverterManagerInterface;
@@ -135,10 +130,6 @@ class AccessManager implements AccessManagerInterface {
     $result = AccessResult::neutral();
     if (!empty($checks)) {
       $arguments_resolver = $this->argumentsResolverFactory->getArgumentsResolver($route_match, $account, $request);
-
-      if (!$checks) {
-        return AccessResult::neutral();
-      }
       $result = AccessResult::allowed();
       foreach ($checks as $service_id) {
         $result = $result->andIf($this->performCheck($service_id, $arguments_resolver));
@@ -173,6 +164,5 @@ class AccessManager implements AccessManagerInterface {
 
     return $service_access;
   }
-
 
 }

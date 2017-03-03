@@ -8,7 +8,10 @@
 use Drupal\Component\Utility\SafeMarkup;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Render\Element;
+use Drupal\Core\Render\Element\Checkboxes;
+use Drupal\Core\Render\Element\Radios;
 use Drupal\Core\Url;
+use Drupal\Core\Template\Attribute;
 
 /**
  * Prepares variables for Views UI display tab setting templates.
@@ -37,6 +40,31 @@ function template_preprocess_views_ui_display_tab_setting(&$variables) {
   // Append a colon to the description, if requested.
   if ($variables['description'] && $variables['description_separator']) {
     $variables['description'] .= t(':');
+  }
+}
+
+/**
+ * Prepares variables for Views UI view listing templates.
+ *
+ * Default template: views-ui-view-listing-table.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - headers: An associative array containing the headers for the view
+ *     listing table.
+ *   - rows: An associative array containing the rows data for the view
+ *     listing table.
+ */
+function template_preprocess_views_ui_views_listing_table(&$variables) {
+  // Convert the attributes to valid attribute objects.
+  foreach ($variables['headers'] as $key => $header) {
+    $variables['headers'][$key]['attributes'] = new Attribute($header['#attributes']);
+  }
+
+  if (!empty($variables['rows'])) {
+    foreach ($variables['rows'] as $key => $row) {
+      $variables['rows'][$key]['attributes'] = new Attribute($row['#attributes']);
+    }
   }
 }
 
@@ -88,8 +116,8 @@ function template_preprocess_views_ui_build_group_filter_form(&$variables) {
 
   // Prepare default selectors.
   $form_state = new FormState();
-  $form['default_group'] = Element\Radios::processRadios($form['default_group'], $form_state, $form);
-  $form['default_group_multiple'] = Element\Checkboxes::processCheckboxes($form['default_group_multiple'], $form_state, $form);
+  $form['default_group'] = Radios::processRadios($form['default_group'], $form_state, $form);
+  $form['default_group_multiple'] = Checkboxes::processCheckboxes($form['default_group_multiple'], $form_state, $form);
   $form['default_group']['All']['#title'] = '';
 
   $rows[] = array(

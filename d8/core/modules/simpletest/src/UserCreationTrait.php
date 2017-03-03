@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\simpletest\UserCreationTrait.
- */
-
 namespace Drupal\simpletest;
 
 use Drupal\Component\Utility\SafeMarkup;
@@ -82,6 +77,8 @@ trait UserCreationTrait {
 
     // Add the raw password so that we can log in as this user.
     $account->pass_raw = $edit['pass'];
+    // Support BrowserTestBase as well.
+    $account->passRaw = $account->pass_raw;
     return $account;
   }
 
@@ -92,7 +89,7 @@ trait UserCreationTrait {
    *   (optional) The role ID (machine name). Defaults to a random name.
    * @param string $name
    *   (optional) The label for the role. Defaults to a random string.
-   * @param integer $weight
+   * @param int $weight
    *   (optional) The weight for the role. Defaults NULL so that entity_create()
    *   sets the weight to maximum + 1.
    *
@@ -119,7 +116,7 @@ trait UserCreationTrait {
    *   (optional) The role ID (machine name). Defaults to a random name.
    * @param string $name
    *   (optional) The label for the role. Defaults to a random string.
-   * @param integer $weight
+   * @param int $weight
    *   (optional) The weight for the role. Defaults NULL so that entity_create()
    *   sets the weight to maximum + 1.
    *

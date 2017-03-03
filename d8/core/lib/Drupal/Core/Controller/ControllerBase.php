@@ -1,13 +1,9 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Controller\ControllerBase.
- */
-
 namespace Drupal\Core\Controller;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\Logger\LoggerChannelTrait;
 use Drupal\Core\Routing\LinkGeneratorTrait;
 use Drupal\Core\Routing\RedirectDestinationTrait;
 use Drupal\Core\Routing\UrlGeneratorTrait;
@@ -38,6 +34,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 abstract class ControllerBase implements ContainerInjectionInterface {
 
   use LinkGeneratorTrait;
+  use LoggerChannelTrait;
   use RedirectDestinationTrait;
   use StringTranslationTrait;
   use UrlGeneratorTrait;
@@ -290,7 +287,7 @@ abstract class ControllerBase implements ContainerInjectionInterface {
    * \Drupal\Core\DependencyInjection\ContainerInjectionInterface should be used
    * for injecting services.
    *
-   * @return \Symfony\Component\DependencyInjection\ContainerInterface $container
+   * @return \Symfony\Component\DependencyInjection\ContainerInterface
    *   The service container.
    */
   private function container() {

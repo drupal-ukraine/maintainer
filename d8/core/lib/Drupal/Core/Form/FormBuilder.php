@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Form\FormBuilder.
- */
-
 namespace Drupal\Core\Form;
 
 use Drupal\Component\Utility\Crypt;
@@ -321,7 +316,7 @@ class FormBuilder implements FormBuilderInterface, FormValidatorInterface, FormS
     // In case the post request exceeds the configured allowed size
     // (post_max_size), the post request is potentially broken. Add some
     // protection against that and at the same time have a nice error message.
-    if ($ajax_form_request && !isset($form_state->getUserInput()['form_id'])) {
+    if ($ajax_form_request && !$request->request->has('form_id')) {
       throw new BrokenPostRequestException($this->getFileUploadMaxSize());
     }
 
@@ -332,7 +327,9 @@ class FormBuilder implements FormBuilderInterface, FormValidatorInterface, FormS
     // then passed through
     // \Drupal\Core\Form\FormAjaxResponseBuilderInterface::buildResponse() to
     // build a proper AJAX response.
-    if ($ajax_form_request && $form_state->isProcessingInput()) {
+    // Only do this when the form ID matches, since there is no guarantee from
+    // $ajax_form_request that it's an AJAX request for this particular form.
+    if ($ajax_form_request && $form_state->isProcessingInput() && $request->request->get('form_id') == $form_id) {
       throw new FormAjaxException($form, $form_state);
     }
 
@@ -655,8 +652,8 @@ class FormBuilder implements FormBuilderInterface, FormValidatorInterface, FormS
    * #lazy_builder callback; renders form CSRF token.
    *
    * @param string $placeholder
-   *  A string containing a placeholder, matching the value of the form's
-   *  #token.
+   *   A string containing a placeholder, matching the value of the form's
+   *   #token.
    *
    * @return array
    *   A renderable array containing the CSRF token.
@@ -686,8 +683,9 @@ class FormBuilder implements FormBuilderInterface, FormValidatorInterface, FormS
       // will be replaced at the very last moment. This ensures forms with
       // dynamically generated action URLs don't have poor cacheability.
       // Use the proper API to generate the placeholder, when we have one. See
-      // https://www.drupal.org/node/2562341.
-      $placeholder = 'form_action_' . hash('crc32b', __METHOD__);
+      // https://www.drupal.org/node/2562341. The placholder uses a fixed string
+      // that is Crypt::hashBase64('Drupal\Core\Form\FormBuilder::prepareForm');
+      $placeholder = 'form_action_p_pvdeGsVG5zNF_XLGPTvYSKCf43t8qZYSwcfZl2uzM';
 
       $form['#attached']['placeholders'][$placeholder] = [
         '#lazy_builder' => ['form_builder:renderPlaceholderFormAction', []],
@@ -747,7 +745,7 @@ class FormBuilder implements FormBuilderInterface, FormValidatorInterface, FormS
       if ($user && $user->isAuthenticated()) {
         // Generate a public token based on the form id.
         // Generates a placeholder based on the form ID.
-        $placeholder = 'form_token_placeholder_' . hash('crc32b', $form_id);
+        $placeholder = 'form_token_placeholder_' . Crypt::hashBase64($form_id);
         $form['#token'] = $placeholder;
 
         $form['form_token'] = array(
@@ -1037,7 +1035,7 @@ class FormBuilder implements FormBuilderInterface, FormValidatorInterface, FormS
 
       // Assign a decimal placeholder weight to preserve original array order.
       if (!isset($element[$key]['#weight'])) {
-        $element[$key]['#weight'] = $count/1000;
+        $element[$key]['#weight'] = $count / 1000;
       }
       else {
         // If one of the child elements has a weight then we will need to sort

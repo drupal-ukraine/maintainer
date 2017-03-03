@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\locale\Tests\LocaleConfigTranslationImportTest.
- */
-
 namespace Drupal\locale\Tests;
 
 use Drupal\locale\Locale;
@@ -65,7 +60,7 @@ class LocaleConfigTranslationImportTest extends WebTestBase {
     $this->drupalPostForm('admin/reports/translations', array(), t('Update translations'));
 
     // Check if configuration translations have been imported.
-    $override =  \Drupal::languageManager()->getLanguageConfigOverride('af', 'system.maintenance');
+    $override = \Drupal::languageManager()->getLanguageConfigOverride('af', 'system.maintenance');
     $this->assertEqual($override->get('message'), 'Ons is tans besig met onderhoud op @site. Wees asseblief geduldig, ons sal binnekort weer terug wees.');
   }
 
@@ -114,7 +109,7 @@ class LocaleConfigTranslationImportTest extends WebTestBase {
       ->save();
 
     // Install any module.
-    $this->drupalPostForm('admin/modules', ['modules[Core][dblog][enable]' => 'dblog'], t('Install'));
+    $this->drupalPostForm('admin/modules', ['modules[dblog][enable]' => 'dblog'], t('Install'));
     $this->assertText('Module Database Logging has been enabled.');
 
     // Get the front page and ensure that the translated configuration still

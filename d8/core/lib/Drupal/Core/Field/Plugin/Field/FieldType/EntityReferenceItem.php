@@ -1,16 +1,12 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem.
- */
-
 namespace Drupal\Core\Field\Plugin\Field\FieldType;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Entity\TypedData\EntityDataDefinition;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\FieldItemBase;
@@ -71,7 +67,7 @@ class EntityReferenceItem extends FieldItemBase implements OptionsProviderInterf
     $target_type_info = \Drupal::entityManager()->getDefinition($settings['target_type']);
 
     $target_id_data_type = 'string';
-    if ($target_type_info->isSubclassOf('\Drupal\Core\Entity\FieldableEntityInterface')) {
+    if ($target_type_info->entityClassImplements(FieldableEntityInterface::class)) {
       $id_definition = \Drupal::entityManager()->getBaseFieldDefinitions($settings['target_type'])[$target_type_info->getKey('id')];
       if ($id_definition->getType() === 'integer') {
         $target_id_data_type = 'integer';
@@ -119,7 +115,7 @@ class EntityReferenceItem extends FieldItemBase implements OptionsProviderInterf
     $target_type = $field_definition->getSetting('target_type');
     $target_type_info = \Drupal::entityManager()->getDefinition($target_type);
     $properties = static::propertyDefinitions($field_definition)['target_id'];
-    if ($target_type_info->isSubclassOf('\Drupal\Core\Entity\FieldableEntityInterface') && $properties->getDataType() === 'integer') {
+    if ($target_type_info->entityClassImplements(FieldableEntityInterface::class) && $properties->getDataType() === 'integer') {
       $columns = array(
         'target_id' => array(
           'description' => 'The ID of the target entity.',
@@ -273,7 +269,26 @@ class EntityReferenceItem extends FieldItemBase implements OptionsProviderInterf
    */
   public static function generateSampleValue(FieldDefinitionInterface $field_definition) {
     $manager = \Drupal::service('plugin.manager.entity_reference_selection');
-    if ($referenceable = $manager->getSelectionHandler($field_definition)->getReferenceableEntities()) {
+
+    // Instead of calling $manager->getSelectionHandler($field_definition)
+    // replicate the behavior to be able to override the sorting settings.
+    $options = array(
+      'target_type' => $field_definition->getFieldStorageDefinition()->getSetting('target_type'),
+      'handler' => $field_definition->getSetting('handler'),
+      'handler_settings' => $field_definition->getSetting('handler_settings') ?: array(),
+      'entity' => NULL,
+    );
+
+    $entity_type = \Drupal::entityManager()->getDefinition($options['target_type']);
+    $options['handler_settings']['sort'] = [
+      'field' => $entity_type->getKey('id'),
+      'direction' => 'DESC',
+    ];
+    $selection_handler = $manager->getInstance($options);
+
+    // Select a random number of references between the last 50 referenceable
+    // entities created.
+    if ($referenceable = $selection_handler->getReferenceableEntities(NULL, 'CONTAINS', 50)) {
       $group = array_rand($referenceable);
       $values['target_id'] = array_rand($referenceable[$group]);
       return $values;
@@ -413,7 +428,9 @@ class EntityReferenceItem extends FieldItemBase implements OptionsProviderInterf
       }
     }
 
-    // Depend on target bundle configurations.
+    // Depend on target bundle configurations. Dependencies for 'target_bundles'
+    // also covers the 'auto_create_bundle' setting, if any, because its value
+    // is included in the 'target_bundles' list.
     $handler = $field_definition->getSetting('handler_settings');
     if (!empty($handler['target_bundles'])) {
       if ($bundle_entity_type_id = $target_entity_type->getBundleEntityType()) {
@@ -473,10 +490,19 @@ class EntityReferenceItem extends FieldItemBase implements OptionsProviderInterf
           foreach ($storage->loadMultiple($handler_settings['target_bundles']) as $bundle) {
             if (isset($dependencies[$bundle->getConfigDependencyKey()][$bundle->getConfigDependencyName()])) {
               unset($handler_settings['target_bundles'][$bundle->id()]);
+
+              // If this bundle is also used in the 'auto_create_bundle'
+              // setting, disable the auto-creation feature completely.
+              $auto_create_bundle = !empty($handler_settings['auto_create_bundle']) ? $handler_settings['auto_create_bundle'] : FALSE;
+              if ($auto_create_bundle && $auto_create_bundle == $bundle->id()) {
+                $handler_settings['auto_create'] = NULL;
+                $handler_settings['auto_create_bundle'] = NULL;
+              }
+
               $bundles_changed = TRUE;
 
               // In case we deleted the only target bundle allowed by the field
-              // we have to log a warning message because the field will not
+              // we have to log a critical message because the field will not
               // function correctly anymore.
               if ($handler_settings['target_bundles'] === []) {
                 \Drupal::logger('entity_reference')->critical('The %target_bundle bundle (entity type: %target_entity_type) was deleted. As a result, the %field_name entity reference field (entity_type: %entity_type, bundle: %bundle) no longer has any valid bundle it can reference. The field is not working correctly anymore and has to be adjusted.', [
@@ -611,7 +637,7 @@ class EntityReferenceItem extends FieldItemBase implements OptionsProviderInterf
     $form_state->setRebuild();
   }
 
-    /**
+  /**
    * {@inheritdoc}
    */
   public static function getPreconfiguredOptions() {

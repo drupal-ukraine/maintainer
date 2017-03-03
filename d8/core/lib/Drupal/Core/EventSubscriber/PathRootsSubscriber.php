@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\EventSubscriber\PathRootsSubscriber.
- */
-
 namespace Drupal\Core\EventSubscriber;
 
 use Drupal\Core\State\StateInterface;
@@ -25,7 +20,7 @@ class PathRootsSubscriber implements EventSubscriberInterface {
    *
    * @var array
    */
-  protected $pathRoots;
+  protected $pathRoots = [];
 
   /**
    * The state key value store.
@@ -63,7 +58,7 @@ class PathRootsSubscriber implements EventSubscriberInterface {
    */
   public function onRouteFinished() {
     $this->state->set('router.path_roots', array_keys($this->pathRoots));
-    unset($this->pathRoots);
+    $this->pathRoots = [];
   }
 
   /**

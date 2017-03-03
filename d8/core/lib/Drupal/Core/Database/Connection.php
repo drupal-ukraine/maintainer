@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Database\Connection.
- */
-
 namespace Drupal\Core\Database;
 
 /**
@@ -90,7 +85,7 @@ abstract class Connection {
   /**
    * An index used to generate unique temporary table names.
    *
-   * @var integer
+   * @var int
    */
   protected $temporaryNameIndex = 0;
 
@@ -144,6 +139,20 @@ abstract class Connection {
    * @var array
    */
   protected $unprefixedTablesMap = [];
+
+  /**
+   * List of escaped database, table, and field names, keyed by unescaped names.
+   *
+   * @var array
+   */
+  protected $escapedNames = [];
+
+  /**
+   * List of escaped aliases names, keyed by unescaped aliases.
+   *
+   * @var array
+   */
+  protected $escapedAliases = [];
 
   /**
    * Constructs a Connection object.
@@ -758,14 +767,11 @@ abstract class Connection {
    */
   public function getDriverClass($class) {
     if (empty($this->driverClasses[$class])) {
-      $driver = $this->driver();
-      if (!empty($this->connectionOptions['namespace'])) {
-        $driver_class  = $this->connectionOptions['namespace'] . '\\' . $class;
+      if (empty($this->connectionOptions['namespace'])) {
+        // Fallback for Drupal 7 settings.php and the test runner script.
+        $this->connectionOptions['namespace'] = (new \ReflectionObject($this))->getNamespaceName();
       }
-      else {
-        // Fallback for Drupal 7 settings.php.
-        $driver_class = "Drupal\\Core\\Database\\Driver\\{$driver}\\{$class}";
-      }
+      $driver_class = $this->connectionOptions['namespace'] . '\\' . $class;
       $this->driverClasses[$class] = class_exists($driver_class) ? $driver_class : $class;
     }
     return $this->driverClasses[$class];
@@ -933,7 +939,10 @@ abstract class Connection {
    *   The sanitized database name.
    */
   public function escapeDatabase($database) {
-    return preg_replace('/[^A-Za-z0-9_.]+/', '', $database);
+    if (!isset($this->escapedNames[$database])) {
+      $this->escapedNames[$database] = preg_replace('/[^A-Za-z0-9_.]+/', '', $database);
+    }
+    return $this->escapedNames[$database];
   }
 
   /**
@@ -950,7 +959,10 @@ abstract class Connection {
    *   The sanitized table name.
    */
   public function escapeTable($table) {
-    return preg_replace('/[^A-Za-z0-9_.]+/', '', $table);
+    if (!isset($this->escapedNames[$table])) {
+      $this->escapedNames[$table] = preg_replace('/[^A-Za-z0-9_.]+/', '', $table);
+    }
+    return $this->escapedNames[$table];
   }
 
   /**
@@ -967,7 +979,10 @@ abstract class Connection {
    *   The sanitized field name.
    */
   public function escapeField($field) {
-    return preg_replace('/[^A-Za-z0-9_.]+/', '', $field);
+    if (!isset($this->escapedNames[$field])) {
+      $this->escapedNames[$field] = preg_replace('/[^A-Za-z0-9_.]+/', '', $field);
+    }
+    return $this->escapedNames[$field];
   }
 
   /**
@@ -985,7 +1000,10 @@ abstract class Connection {
    *   The sanitized alias name.
    */
   public function escapeAlias($field) {
-    return preg_replace('/[^A-Za-z0-9_]+/', '', $field);
+    if (!isset($this->escapedAliases[$field])) {
+      $this->escapedAliases[$field] = preg_replace('/[^A-Za-z0-9_]+/', '', $field);
+    }
+    return $this->escapedAliases[$field];
   }
 
   /**
@@ -1065,9 +1083,9 @@ abstract class Connection {
    * @throws \Drupal\Core\Database\TransactionOutOfOrderException
    * @throws \Drupal\Core\Database\TransactionNoActiveException
    *
-   * @see \Drupal\Core\Database\Transaction::rollback()
+   * @see \Drupal\Core\Database\Transaction::rollBack()
    */
-  public function rollback($savepoint_name = 'drupal_transaction') {
+  public function rollBack($savepoint_name = 'drupal_transaction') {
     if (!$this->supportsTransactions()) {
       return;
     }
@@ -1161,7 +1179,7 @@ abstract class Connection {
     // The transaction has already been committed earlier. There is nothing we
     // need to do. If this transaction was part of an earlier out-of-order
     // rollback, an exception would already have been thrown by
-    // Database::rollback().
+    // Database::rollBack().
     if (!isset($this->transactionLayers[$name])) {
       return;
     }
@@ -1424,6 +1442,26 @@ abstract class Connection {
    */
   public function quote($string, $parameter_type = \PDO::PARAM_STR) {
     return $this->connection->quote($string, $parameter_type);
+  }
+
+  /**
+   * Extracts the SQLSTATE error from the PDOException.
+   *
+   * @param \Exception $e
+   *   The exception
+   *
+   * @return string
+   *   The five character error code.
+   */
+  protected static function getSQLState(\Exception $e) {
+    // The PDOException code is not always reliable, try to see whether the
+    // message has something usable.
+    if (preg_match('/^SQLSTATE\[(\w{5})\]/', $e->getMessage(), $matches)) {
+      return $matches[1];
+    }
+    else {
+      return $e->getCode();
+    }
   }
 
   /**

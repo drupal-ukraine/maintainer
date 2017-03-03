@@ -1,13 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Tests\ViewResultAssertionTrait.
- */
-
 namespace Drupal\views\Tests;
 
-use Drupal\views\Plugin\views\field\Field;
+use Drupal\views\Plugin\views\field\EntityField;
 
 /**
  * Provides a class for assertions to check for the expected result of a View.
@@ -50,7 +45,7 @@ trait ViewResultAssertionTrait {
    *   An expected result set.
    * @param array $column_map
    *   (optional) An associative array mapping the columns of the result set
-   *  from the view (as keys) and the expected result set (as values).
+   *   from the view (as keys) and the expected result set (as values).
    * @param string $message
    *   (optional) A custom message to display with the assertion. Defaults to
    *   'Non-identical result set.'
@@ -96,7 +91,7 @@ trait ViewResultAssertionTrait {
         // The comparison will be done on the string representation of the value.
         // For entity fields we don't have the raw value. Let's try to fetch it
         // using the entity itself.
-        elseif (empty($value->$view_column) && isset($view->field[$expected_column]) && ($field = $view->field[$expected_column]) && $field instanceof Field) {
+        elseif (empty($value->$view_column) && isset($view->field[$expected_column]) && ($field = $view->field[$expected_column]) && $field instanceof EntityField) {
           $column = NULL;
           if (count(explode(':', $view_column)) == 2) {
             $column = explode(':', $view_column)[1];
@@ -130,7 +125,7 @@ trait ViewResultAssertionTrait {
 
     $this->verbose('<pre style="white-space: pre-wrap;">'
       . "\n\nQuery:\n" . $view->build_info['query']
-      . "\n\nQuery arguments:\n" . var_export($view->build_info['query_args'], TRUE)
+      . "\n\nQuery arguments:\n" . var_export($view->build_info['query']->getArguments(), TRUE)
       . "\n\nActual result:\n" . var_export($result, TRUE)
       . "\n\nExpected result:\n" . var_export($expected_result, TRUE));
 

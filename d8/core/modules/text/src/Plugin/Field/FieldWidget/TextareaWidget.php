@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\text\Plugin\Field\FieldWidget\TextareaWidget.
- */
-
 namespace Drupal\text\Plugin\Field\FieldWidget;
 
 use Drupal\Core\Field\FieldItemListInterface;
@@ -24,6 +19,15 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
  * )
  */
 class TextareaWidget extends StringTextareaWidget {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function settingsForm(array $form, FormStateInterface $form_state) {
+    $element = parent::settingsForm($form, $form_state);
+    $element['rows']['#description'] = $this->t('Text editors (like CKEditor) may override this setting.');
+    return $element;
+  }
 
   /**
    * {@inheritdoc}

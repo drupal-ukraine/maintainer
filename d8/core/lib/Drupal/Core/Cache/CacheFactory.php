@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Cache\CacheFactory.
- */
-
 namespace Drupal\Core\Cache;
 
 /**
@@ -14,7 +9,7 @@ use Drupal\Core\Site\Settings;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
-class CacheFactory implements CacheFactoryInterface,  ContainerAwareInterface {
+class CacheFactory implements CacheFactoryInterface, ContainerAwareInterface {
 
   use ContainerAwareTrait;
 
@@ -69,16 +64,20 @@ class CacheFactory implements CacheFactoryInterface,  ContainerAwareInterface {
    */
   public function get($bin) {
     $cache_settings = $this->settings->get('cache');
+    // First, look for a cache bin specific setting.
     if (isset($cache_settings['bins'][$bin])) {
       $service_name = $cache_settings['bins'][$bin];
     }
-    elseif (isset($cache_settings['default'])) {
-      $service_name = $cache_settings['default'];
-    }
+    // Second, use the default backend specified by the cache bin.
     elseif (isset($this->defaultBinBackends[$bin])) {
       $service_name = $this->defaultBinBackends[$bin];
     }
+    // Third, use configured default backend.
+    elseif (isset($cache_settings['default'])) {
+      $service_name = $cache_settings['default'];
+    }
     else {
+      // Fall back to the database backend if nothing else is configured.
       $service_name = 'cache.backend.database';
     }
     return $this->container->get($service_name)->get($bin);

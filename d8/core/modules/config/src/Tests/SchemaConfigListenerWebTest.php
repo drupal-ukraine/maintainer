@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\config\Tests\SchemaConfigListenerWebTest.
- */
-
 namespace Drupal\config\Tests;
 
 use Drupal\Core\Config\Schema\SchemaIncompleteException;
@@ -23,7 +18,7 @@ class SchemaConfigListenerWebTest extends WebTestBase {
   public static $modules = array('config_test');
 
   /**
-   * Tests \Drupal\Core\Config\Testing\ConfigSchemaChecker.
+   * Tests \Drupal\Core\Config\Development\ConfigSchemaChecker.
    */
   public function testConfigSchemaChecker() {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));

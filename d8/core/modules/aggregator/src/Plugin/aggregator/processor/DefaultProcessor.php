@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\aggregator\Plugin\aggregator\processor\DefaultProcessor.
- */
-
 namespace Drupal\aggregator\Plugin\aggregator\processor;
 
+use Drupal\aggregator\Entity\Item;
 use Drupal\aggregator\ItemStorageInterface;
 use Drupal\aggregator\Plugin\AggregatorPluginSettingsBase;
 use Drupal\aggregator\Plugin\ProcessorInterface;
@@ -14,7 +10,6 @@ use Drupal\aggregator\FeedInterface;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Datetime\DateFormatterInterface;
-use Drupal\Core\Entity\Query\QueryInterface;
 use Drupal\Core\Form\ConfigFormBaseTrait;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
@@ -44,13 +39,6 @@ class DefaultProcessor extends AggregatorPluginSettingsBase implements Processor
   protected $configFactory;
 
   /**
-   * The entity query object for feed items.
-   *
-   * @var \Drupal\Core\Entity\Query\QueryInterface
-   */
-  protected $itemQuery;
-
-  /**
    * The entity storage for items.
    *
    * @var \Drupal\aggregator\ItemStorageInterface
@@ -75,17 +63,14 @@ class DefaultProcessor extends AggregatorPluginSettingsBase implements Processor
    *   The plugin implementation definition.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config
    *   The configuration factory object.
-   * @param \Drupal\Core\Entity\Query\QueryInterface $item_query
-   *   The entity query object for feed items.
    * @param \Drupal\aggregator\ItemStorageInterface $item_storage
    *   The entity storage for feed items.
    * @param \Drupal\Core\Datetime\DateFormatterInterface $date_formatter
    *   The date formatter service.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, ConfigFactoryInterface $config, QueryInterface $item_query, ItemStorageInterface $item_storage, DateFormatterInterface $date_formatter) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, ConfigFactoryInterface $config, ItemStorageInterface $item_storage, DateFormatterInterface $date_formatter) {
     $this->configFactory = $config;
     $this->itemStorage = $item_storage;
-    $this->itemQuery = $item_query;
     $this->dateFormatter = $date_formatter;
     // @todo Refactor aggregator plugins to ConfigEntity so merging
     //   the configuration here is not needed.
@@ -101,8 +86,7 @@ class DefaultProcessor extends AggregatorPluginSettingsBase implements Processor
       $plugin_id,
       $plugin_definition,
       $container->get('config.factory'),
-      $container->get('entity.query')->get('aggregator_item'),
-      $container->get('entity.manager')->getStorage('aggregator_item'),
+      $container->get('entity_type.manager')->getStorage('aggregator_item'),
       $container->get('date.formatter')
     );
   }
@@ -215,7 +199,7 @@ class DefaultProcessor extends AggregatorPluginSettingsBase implements Processor
         $entry = reset($entry);
       }
       else {
-        $entry = entity_create('aggregator_item', array('langcode' => $feed->language()->getId()));
+        $entry = Item::create(array('langcode' => $feed->language()->getId()));
       }
       if ($item['timestamp']) {
         $entry->setPostedTime($item['timestamp']);
@@ -261,7 +245,7 @@ class DefaultProcessor extends AggregatorPluginSettingsBase implements Processor
     if ($aggregator_clear != AGGREGATOR_CLEAR_NEVER) {
       // Delete all items that are older than flush item timer.
       $age = REQUEST_TIME - $aggregator_clear;
-      $result = $this->itemQuery
+      $result = $this->itemStorage->getQuery()
         ->condition('fid', $feed->id())
         ->condition('timestamp', $age, '<')
         ->execute();

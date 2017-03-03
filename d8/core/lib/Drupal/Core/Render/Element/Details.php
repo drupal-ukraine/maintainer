@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\Details.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Core\Render\Element;
@@ -25,12 +20,12 @@ use Drupal\Core\Render\Element;
  * @code
  * $form['author'] = array(
  *   '#type' => 'details',
- *   '#title' => 'Author',
+ *   '#title' => $this->t('Author'),
  * );
  *
  * $form['author']['name'] = array(
  *   '#type' => 'textfield',
- *   '#title' => t('Name'),
+ *   '#title' => $this->t('Name'),
  * );
  * @endcode
  *
@@ -80,7 +75,9 @@ class Details extends RenderElement {
 
     // Collapsible details.
     $element['#attached']['library'][] = 'core/drupal.collapse';
-    if (!empty($element['#open'])) {
+
+    // Open the detail if specified or if a child has an error.
+    if (!empty($element['#open']) || !empty($element['#children_errors'])) {
       $element['#attributes']['open'] = 'open';
     }
 

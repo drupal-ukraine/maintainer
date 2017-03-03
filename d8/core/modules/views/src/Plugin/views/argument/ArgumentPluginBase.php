@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\argument\ArgumentPluginBase.
- */
-
 namespace Drupal\views\Plugin\views\argument;
 
 use Drupal\Component\Plugin\DependentPluginInterface;
@@ -60,15 +55,15 @@ use Drupal\views\Views;
  */
 abstract class ArgumentPluginBase extends HandlerBase implements CacheableDependencyInterface {
 
-  var $validator = NULL;
-  var $argument = NULL;
-  var $value = NULL;
+  public $validator = NULL;
+  public $argument = NULL;
+  public $value = NULL;
 
   /**
    * The table to use for the name, should it not be in the same table as the argument.
    * @var string
    */
-  var $name_table;
+  public $name_table;
 
   /**
    * The field to use for the name to use in the summary, which is
@@ -76,7 +71,7 @@ abstract class ArgumentPluginBase extends HandlerBase implements CacheableDepend
    * the argument itself is the nid, but node.title is displayed.
    * @var string
    */
-  var $name_field;
+  public $name_field;
 
   /**
    * Overrides Drupal\views\Plugin\views\HandlerBase:init().
@@ -110,7 +105,7 @@ abstract class ArgumentPluginBase extends HandlerBase implements CacheableDepend
   /**
    * Determine if the argument needs a style plugin.
    *
-   * @return TRUE/FALSE
+   * @return bool
    */
   public function needsStylePlugin() {
     $info = $this->defaultActions($this->options['default_action']);
@@ -1177,7 +1172,7 @@ abstract class ArgumentPluginBase extends HandlerBase implements CacheableDepend
    * Moves argument options into their place.
    *
    * When configuring the default argument behavior, almost each of the radio
-   * buttons has its own fieldset shown bellow it when the radio button is
+   * buttons has its own fieldset shown below it when the radio button is
    * clicked. That fieldset is created through a custom form process callback.
    * Each element that has #argument_option defined and pointing to a default
    * behavior gets moved to the appropriate fieldset.
@@ -1211,7 +1206,7 @@ abstract class ArgumentPluginBase extends HandlerBase implements CacheableDepend
    * @return string
    *   The sanitized identifier.
    *
-   * @see decodeValidatorId().
+   * @see decodeValidatorId()
    */
   public static function encodeValidatorId($id) {
     return str_replace(':', '---', $id);
@@ -1329,6 +1324,17 @@ abstract class ArgumentPluginBase extends HandlerBase implements CacheableDepend
     }
 
     return $dependencies;
+  }
+
+  /**
+   * Returns a context definition for this argument.
+   *
+   * @return \Drupal\Core\Plugin\Context\ContextDefinitionInterface|null
+   *   A context definition that represents the argument or NULL if that is
+   *   not possible.
+   */
+  public function getContextDefinition() {
+    return $this->getPlugin('argument_validator')->getContextDefinition();
   }
 
 }

@@ -1,15 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\simpletest\KernelTestBase.
- */
-
 namespace Drupal\simpletest;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\SafeMarkup;
 use Drupal\Component\Utility\Variable;
+use Drupal\Core\Config\Development\ConfigSchemaChecker;
 use Drupal\Core\Database\Database;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\DrupalKernel;
@@ -34,7 +30,7 @@ use Symfony\Component\HttpFoundation\Request;
  * Additional modules needed in a test may be loaded and added to the fixed
  * module list.
  *
- * @deprecated in Drupal 8.0.x, will be removed before Drupal 8.2.x. Use
+ * @deprecated in Drupal 8.0.x, will be removed before Drupal 9.0.0. Use
  *   \Drupal\KernelTests\KernelTestBase instead.
  *
  * @see \Drupal\simpletest\KernelTestBase::$modules
@@ -236,7 +232,7 @@ EOD;
     // \Drupal\Core\Config\ConfigInstaller::installDefaultConfig() to work.
     // Write directly to active storage to avoid early instantiation of
     // the event dispatcher which can prevent modules from registering events.
-    \Drupal::service('config.storage')->write('core.extension', array('module' => array(), 'theme' => array()));
+    \Drupal::service('config.storage')->write('core.extension', array('module' => array(), 'theme' => array(), 'profile' => ''));
 
     // Collect and set a fixed module list.
     $class = get_class($this);
@@ -271,6 +267,12 @@ EOD;
     // The temporary stream wrapper is able to operate both with and without
     // configuration.
     $this->registerStreamWrapper('temporary', 'Drupal\Core\StreamWrapper\TemporaryStream');
+
+    // Manually configure the test mail collector implementation to prevent
+    // tests from sending out emails and collect them in state instead.
+    // While this should be enforced via settings.php prior to installation,
+    // some tests expect to be able to test mail system implementations.
+    $GLOBALS['config']['system.mail']['interface']['default'] = 'test_mail_collector';
   }
 
   /**
@@ -320,7 +322,7 @@ EOD;
 
     if ($this->strictConfigSchema) {
       $container
-        ->register('simpletest.config_schema_checker', 'Drupal\Core\Config\Testing\ConfigSchemaChecker')
+        ->register('simpletest.config_schema_checker', ConfigSchemaChecker::class)
         ->addArgument(new Reference('config.typed'))
         ->addArgument($this->getConfigSchemaExclusions())
         ->addTag('event_subscriber');
@@ -429,10 +431,18 @@ EOD;
     if (!$this->container->get('module_handler')->moduleExists($module)) {
       throw new \RuntimeException("'$module' module is not enabled");
     }
+
     $tables = (array) $tables;
     foreach ($tables as $table) {
       $schema = drupal_get_module_schema($module, $table);
       if (empty($schema)) {
+        // BC layer to avoid some contrib tests to fail.
+        // @todo Remove the BC layer before 8.1.x release.
+        // @see https://www.drupal.org/node/2670360
+        // @see https://www.drupal.org/node/2670454
+        if ($module == 'system') {
+          continue;
+        }
         throw new \RuntimeException("Unknown '$table' table schema in '$module' module.");
       }
       $this->container->get('database')->schema()->createTable($table, $schema);
@@ -485,6 +495,12 @@ EOD;
   /**
    * Enables modules for this test.
    *
+   * To install test modules outside of the testing environment, add
+   * @code
+   * $settings['extension_discovery_scan_tests'] = TRUE;
+   * @endcode
+   * to your settings.php.
+   *
    * @param array $modules
    *   A list of modules to enable. Dependencies are not resolved; i.e.,
    *   multiple modules have to be specified with dependent modules first.
@@ -504,7 +520,7 @@ EOD;
 
     // Write directly to active storage to avoid early instantiation of
     // the event dispatcher which can prevent modules from registering events.
-    $active_storage =  \Drupal::service('config.storage');
+    $active_storage = \Drupal::service('config.storage');
     $extensions = $active_storage->read('core.extension');
 
     foreach ($modules as $module) {
@@ -518,7 +534,8 @@ EOD;
     $module_filenames = $module_handler->getModuleList();
     $this->kernel->updateModules($module_filenames, $module_filenames);
 
-    // Ensure isLoaded() is TRUE in order to make _theme() work.
+    // Ensure isLoaded() is TRUE in order to make
+    // \Drupal\Core\Theme\ThemeManagerInterface::render() work.
     // Note that the kernel has rebuilt the container; this $module_handler is
     // no longer the $module_handler instance from above.
     $this->container->get('module_handler')->reload();
@@ -551,7 +568,8 @@ EOD;
     // Update the kernel to remove their services.
     $this->kernel->updateModules($module_filenames, $module_filenames);
 
-    // Ensure isLoaded() is TRUE in order to make _theme() work.
+    // Ensure isLoaded() is TRUE in order to make
+    // \Drupal\Core\Theme\ThemeManagerInterface::render() work.
     // Note that the kernel has rebuilt the container; this $module_handler is
     // no longer the $module_handler instance from above.
     $module_handler = $this->container->get('module_handler');
@@ -588,9 +606,7 @@ EOD;
   protected function render(array &$elements) {
     // Use the bare HTML page renderer to render our links.
     $renderer = $this->container->get('bare_html_page_renderer');
-    $response = $renderer->renderBarePage(
-      $elements, '', $this->container->get('theme.manager')->getActiveTheme()->getName()
-    );
+    $response = $renderer->renderBarePage($elements, '', 'maintenance_page');
 
     // Glean the content from the response object.
     $content = $response->getContent();

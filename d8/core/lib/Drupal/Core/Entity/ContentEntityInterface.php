@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Entity\ContentEntityInterface.
- */
-
 namespace Drupal\Core\Entity;
 
 use Drupal\Core\TypedData\TranslatableInterface;
@@ -57,5 +52,26 @@ interface ContentEntityInterface extends \Traversable, FieldableEntityInterface,
    *   otherwise.
    */
   public function isRevisionTranslationAffected();
+
+  /**
+   * Gets the loaded Revision ID of the entity.
+   *
+   * @return int
+   *   The loaded Revision identifier of the entity, or NULL if the entity
+   *   does not have a revision identifier.
+   */
+  public function getLoadedRevisionId();
+
+  /**
+   * Updates the loaded Revision ID with the revision ID.
+   *
+   * This method should not be used, it could unintentionally cause the original
+   * revision ID property value to be lost.
+   *
+   * @internal
+   *
+   * @return $this
+   */
+  public function updateLoadedRevisionId();
 
 }

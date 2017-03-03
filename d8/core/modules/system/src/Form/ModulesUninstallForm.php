@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Form\ModulesUninstallForm.
- */
-
 namespace Drupal\system\Form;
 
 use Drupal\Core\Extension\ModuleHandlerInterface;
@@ -172,7 +167,7 @@ class ModulesUninstallForm extends FormBase {
   public function validateForm(array &$form, FormStateInterface $form_state) {
     // Form submitted, but no modules selected.
     if (!array_filter($form_state->getValue('uninstall'))) {
-      $form_state->setErrorByName('uninstall', $this->t('No modules selected.'));
+      $form_state->setErrorByName('', $this->t('No modules selected.'));
       $form_state->setRedirect('system.modules_uninstall');
     }
   }
@@ -187,9 +182,10 @@ class ModulesUninstallForm extends FormBase {
     $account = $this->currentUser()->id();
     // Store the values for 6 hours. This expiration time is also used in
     // the form cache.
-    $this->keyValueExpirable->setWithExpire($account, $uninstall, 6*60*60);
+    $this->keyValueExpirable->setWithExpire($account, $uninstall, 6 * 60 * 60);
 
     // Redirect to the confirm form.
     $form_state->setRedirect('system.modules_uninstall_confirm');
   }
+
 }

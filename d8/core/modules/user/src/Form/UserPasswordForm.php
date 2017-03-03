@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\user\Form\UserPasswordForm.
- */
-
 namespace Drupal\user\Form;
 
 use Drupal\Core\Form\FormBase;
@@ -104,6 +99,7 @@ class UserPasswordForm extends FormBase {
     }
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array('#type' => 'submit', '#value' => $this->t('Submit'));
+    $form['#cache']['contexts'][] = 'url.query_args';
 
     return $form;
   }

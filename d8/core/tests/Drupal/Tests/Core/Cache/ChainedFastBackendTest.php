@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\Core\Cache\ChainedFastBackendTest.
- */
-
 namespace Drupal\Tests\Core\Cache;
 
 use Drupal\Core\Cache\ChainedFastBackend;
@@ -52,7 +47,7 @@ class ChainedFastBackendTest extends UnitTestCase {
     $consistent_cache->expects($this->never())
       ->method('getMultiple');
 
-    $fast_cache = new MemoryBackend('foo');
+    $fast_cache = new MemoryBackend();
     $fast_cache->set('foo', 'baz');
 
     $chained_fast_backend = new ChainedFastBackend(

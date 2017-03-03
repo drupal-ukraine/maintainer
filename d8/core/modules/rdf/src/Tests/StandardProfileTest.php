@@ -1,17 +1,15 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\rdf\Tests\StandardProfileTest.
- */
-
 namespace Drupal\rdf\Tests;
 
 use Drupal\Core\Url;
+use Drupal\file\Entity\File;
 use Drupal\image\Entity\ImageStyle;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeInterface;
 use Drupal\simpletest\WebTestBase;
+use Drupal\comment\Entity\Comment;
+use Drupal\taxonomy\Entity\Term;
 
 /**
  * Tests the RDF mappings and RDFa markup of the standard profile.
@@ -130,22 +128,22 @@ class StandardProfileTest extends WebTestBase {
     $this->drupalLogin($this->adminUser);
 
     // Create term.
-    $this->term = entity_create('taxonomy_term', array(
+    $this->term = Term::create([
       'name' => $this->randomMachineName(),
       'description' => $this->randomMachineName(),
       'vid' => 'tags',
-    ));
+    ]);
     $this->term->save();
 
     // Create image.
     file_unmanaged_copy(\Drupal::root() . '/core/misc/druplicon.png', 'public://example.jpg');
-    $this->image = entity_create('file', array('uri' => 'public://example.jpg'));
+    $this->image = File::create(['uri' => 'public://example.jpg']);
     $this->image->save();
 
     // Create article.
     $article_settings = array(
       'type' => 'article',
-      'promote' => NODE_PROMOTED,
+      'promote' => NodeInterface::PROMOTED,
       'field_image' => array(
         array(
           'target_id' => $this->image->id(),
@@ -159,7 +157,7 @@ class StandardProfileTest extends WebTestBase {
     );
     $this->article = $this->drupalCreateNode($article_settings);
     // Create second article to test teaser list.
-    $this->drupalCreateNode(array('type' => 'article', 'promote' => NODE_PROMOTED,));
+    $this->drupalCreateNode(['type' => 'article', 'promote' => NodeInterface::PROMOTED]);
 
     // Create article comment.
     $this->articleComment = $this->saveComment($this->article->id(), $this->webUser->id(), NULL, 0);
@@ -515,7 +513,7 @@ class StandardProfileTest extends WebTestBase {
       $values += $contact;
     }
 
-    $comment = entity_create('comment', $values);
+    $comment = Comment::create($values);
     $comment->save();
     return $comment;
   }
@@ -535,4 +533,5 @@ class StandardProfileTest extends WebTestBase {
     $parser->parse($graph, $this->drupalGet($url), 'rdfa', $this->baseUri);
     return $graph;
   }
+
 }

@@ -114,7 +114,7 @@ class GetSetMethodNormalizer extends AbstractNormalizer
             if ($allowed && !$ignored) {
                 $setter = 'set'.ucfirst($attribute);
 
-                if (in_array($setter, $classMethods)) {
+                if (in_array($setter, $classMethods) && !$reflectionClass->getMethod($setter)->isStatic()) {
                     $object->$setter($value);
                 }
             }
@@ -136,7 +136,7 @@ class GetSetMethodNormalizer extends AbstractNormalizer
      */
     public function supportsDenormalization($data, $type, $format = null)
     {
-        return $this->supports($type);
+        return class_exists($type) && $this->supports($type);
     }
 
     /**
@@ -164,16 +164,19 @@ class GetSetMethodNormalizer extends AbstractNormalizer
      *
      * @param \ReflectionMethod $method the method to check
      *
-     * @return bool whether the method is a getter or boolean getter.
+     * @return bool whether the method is a getter or boolean getter
      */
     private function isGetMethod(\ReflectionMethod $method)
     {
         $methodLength = strlen($method->name);
 
-        return (
-            ((0 === strpos($method->name, 'get') && 3 < $methodLength) ||
-            (0 === strpos($method->name, 'is') && 2 < $methodLength)) &&
-            0 === $method->getNumberOfRequiredParameters()
-        );
+        return
+            !$method->isStatic() &&
+            (
+                ((0 === strpos($method->name, 'get') && 3 < $methodLength) ||
+                (0 === strpos($method->name, 'is') && 2 < $methodLength)) &&
+                0 === $method->getNumberOfRequiredParameters()
+            )
+        ;
     }
 }

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Render\Element\PasswordConfirm.
- */
-
 namespace Drupal\Core\Render\Element;
 
 use Drupal\Core\Form\FormStateInterface;
@@ -15,11 +10,14 @@ use Drupal\Core\Form\FormStateInterface;
  * Formats as a pair of password fields, which do not validate unless the two
  * entered passwords match.
  *
+ * Properties:
+ * - #size: The size of the input element in characters.
+ *
  * Usage example:
  * @code
  * $form['pass'] = array(
  *   '#type' => 'password_confirm',
- *   '#title' => t('Password'),
+ *   '#title' => $this->t('Password'),
  *   '#size' => 25,
  * );
  * @endcode
@@ -70,7 +68,7 @@ class PasswordConfirm extends FormElement {
    * Expand a password_confirm field into two text boxes.
    */
   public static function processPasswordConfirm(&$element, FormStateInterface $form_state, &$complete_form) {
-    $element['pass1'] =  array(
+    $element['pass1'] = array(
       '#type' => 'password',
       '#title' => t('Password'),
       '#value' => empty($element['#value']) ? NULL : $element['#value']['pass1'],
@@ -78,7 +76,7 @@ class PasswordConfirm extends FormElement {
       '#attributes' => array('class' => array('password-field', 'js-password-field')),
       '#error_no_message' => TRUE,
     );
-    $element['pass2'] =  array(
+    $element['pass2'] = array(
       '#type' => 'password',
       '#title' => t('Confirm password'),
       '#value' => empty($element['#value']) ? NULL : $element['#value']['pass2'],

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\statistics\Tests\StatisticsLoggingTest.
- */
-
 namespace Drupal\statistics\Tests;
 
 use Drupal\simpletest\WebTestBase;
@@ -87,9 +82,7 @@ class StatisticsLoggingTest extends WebTestBase {
 
     // Clear the logs.
     db_truncate('node_counter');
-
-    $this->client = \Drupal::service('http_client_factory')
-      ->fromOptions(['config/curl' => [CURLOPT_TIMEOUT => 10]]);
+    $this->client = \Drupal::httpClient();
   }
 
   /**

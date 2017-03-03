@@ -1,16 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\menu_ui\MenuForm.
- */
-
 namespace Drupal\menu_ui;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityForm;
-use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Link;
@@ -27,13 +21,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Base form for menu edit forms.
  */
 class MenuForm extends EntityForm {
-
-  /**
-   * The factory for entity queries.
-   *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
-   */
-  protected $entityQueryFactory;
 
   /**
    * The menu link manager.
@@ -66,8 +53,6 @@ class MenuForm extends EntityForm {
   /**
    * Constructs a MenuForm object.
    *
-   * @param \Drupal\Core\Entity\Query\QueryFactory $entity_query_factory
-   *   The factory for entity queries.
    * @param \Drupal\Core\Menu\MenuLinkManagerInterface $menu_link_manager
    *   The menu link manager.
    * @param \Drupal\Core\Menu\MenuLinkTreeInterface $menu_tree
@@ -75,8 +60,7 @@ class MenuForm extends EntityForm {
    * @param \Drupal\Core\Utility\LinkGeneratorInterface $link_generator
    *   The link generator.
    */
-  public function __construct(QueryFactory $entity_query_factory, MenuLinkManagerInterface $menu_link_manager, MenuLinkTreeInterface $menu_tree, LinkGeneratorInterface $link_generator) {
-    $this->entityQueryFactory = $entity_query_factory;
+  public function __construct(MenuLinkManagerInterface $menu_link_manager, MenuLinkTreeInterface $menu_tree, LinkGeneratorInterface $link_generator) {
     $this->menuLinkManager = $menu_link_manager;
     $this->menuTree = $menu_tree;
     $this->linkGenerator = $link_generator;
@@ -87,7 +71,6 @@ class MenuForm extends EntityForm {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity.query'),
       $container->get('plugin.manager.menu.link'),
       $container->get('menu.link_tree'),
       $container->get('link_generator')
@@ -165,7 +148,7 @@ class MenuForm extends EntityForm {
    */
   public function menuNameExists($value) {
     // Check first to see if a menu with this ID exists.
-    if ($this->entityQueryFactory->get('menu')->condition('id', $value)->range(0, 1)->count()->execute()) {
+    if ($this->entityTypeManager->getStorage('menu')->getQuery()->condition('id', $value)->range(0, 1)->count()->execute()) {
       return TRUE;
     }
 
@@ -178,12 +161,7 @@ class MenuForm extends EntityForm {
    */
   public function save(array $form, FormStateInterface $form_state) {
     $menu = $this->entity;
-    if (!$menu->isNew() || $menu->isLocked()) {
-      $this->submitOverviewForm($form, $form_state);
-    }
-
     $status = $menu->save();
-
     $edit_link = $this->entity->link($this->t('Edit'));
     if ($status == SAVED_UPDATED) {
       drupal_set_message($this->t('Menu %label has been updated.', array('%label' => $menu->label())));
@@ -195,6 +173,17 @@ class MenuForm extends EntityForm {
     }
 
     $form_state->setRedirectUrl($this->entity->urlInfo('edit-form'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    parent::submitForm($form, $form_state);
+
+    if (!$this->entity->isNew() || $this->entity->isLocked()) {
+      $this->submitOverviewForm($form, $form_state);
+    }
   }
 
   /**
@@ -291,8 +280,6 @@ class MenuForm extends EntityForm {
         // TableDrag: Mark the table row as draggable.
         $form['links'][$id]['#attributes'] = $element['#attributes'];
         $form['links'][$id]['#attributes']['class'][] = 'draggable';
-
-        $form['links'][$id]['#item'] = $element['#item'];
 
         // TableDrag: Sort the table row according to its existing/configured weight.
         $form['links'][$id]['#weight'] = $element['#item']->link->getWeight();

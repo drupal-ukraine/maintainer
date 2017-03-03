@@ -1,13 +1,10 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Plugin\DefaultPluginManager.
- */
-
 namespace Drupal\Core\Plugin;
 
+use Drupal\Component\Plugin\Definition\PluginDefinitionInterface;
 use Drupal\Component\Plugin\Discovery\CachedDiscoveryInterface;
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\UseCacheBackendTrait;
 use Drupal\Component\Plugin\Discovery\DiscoveryCachedTrait;
@@ -25,7 +22,7 @@ use Drupal\Core\Plugin\Factory\ContainerFactory;
  *
  * @ingroup plugin_api
  */
-class DefaultPluginManager extends PluginManagerBase implements PluginManagerInterface, CachedDiscoveryInterface {
+class DefaultPluginManager extends PluginManagerBase implements PluginManagerInterface, CachedDiscoveryInterface, CacheableDependencyInterface {
 
   use DiscoveryCachedTrait;
   use UseCacheBackendTrait;
@@ -42,7 +39,7 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
    *
    * @var array
    */
-  protected $cacheTags = array();
+  protected $cacheTags = [];
 
   /**
    * Name of the alter hook if one should be invoked.
@@ -73,7 +70,7 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
    *
    * @var array
    */
-  protected $defaults = array();
+  protected $defaults = [];
 
   /**
    * The name of the annotation that contains the plugin definition.
@@ -98,6 +95,14 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
   protected $namespaces;
 
   /**
+   * Additional namespaces the annotation discovery mechanism should scan for
+   * annotation definitions.
+   *
+   * @var string[]
+   */
+  protected $additionalAnnotationNamespaces = [];
+
+  /**
    * Creates the discovery object.
    *
    * @param string|bool $subdir
@@ -112,13 +117,16 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
    * @param string $plugin_definition_annotation_name
    *   (optional) The name of the annotation that contains the plugin definition.
    *   Defaults to 'Drupal\Component\Annotation\Plugin'.
+   * @param string[] $additional_annotation_namespaces
+   *   (optional) Additional namespaces to scan for annotation definitions.
    */
-  public function __construct($subdir, \Traversable $namespaces, ModuleHandlerInterface $module_handler, $plugin_interface = NULL, $plugin_definition_annotation_name = 'Drupal\Component\Annotation\Plugin') {
+  public function __construct($subdir, \Traversable $namespaces, ModuleHandlerInterface $module_handler, $plugin_interface = NULL, $plugin_definition_annotation_name = 'Drupal\Component\Annotation\Plugin', array $additional_annotation_namespaces = []) {
     $this->subdir = $subdir;
     $this->namespaces = $namespaces;
     $this->pluginDefinitionAnnotationName = $plugin_definition_annotation_name;
     $this->pluginInterface = $plugin_interface;
     $this->moduleHandler = $module_handler;
+    $this->additionalAnnotationNamespaces = $additional_annotation_namespaces;
   }
 
   /**
@@ -232,8 +240,17 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
    * method.
    */
   public function processDefinition(&$definition, $plugin_id) {
-    if (!empty($this->defaults) && is_array($this->defaults)) {
+    // Only array-based definitions can have defaults merged in.
+    if (is_array($definition) && !empty($this->defaults) && is_array($this->defaults)) {
       $definition = NestedArray::mergeDeep($this->defaults, $definition);
+    }
+
+    // Keep class definitions standard with no leading slash.
+    if ($definition instanceof PluginDefinitionInterface) {
+      $definition->setClass(ltrim($definition->getClass(), '\\'));
+    }
+    elseif (is_array($definition) && isset($definition['class'])) {
+      $definition['class'] = ltrim($definition['class'], '\\');
     }
   }
 
@@ -242,7 +259,7 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
    */
   protected function getDiscovery() {
     if (!$this->discovery) {
-      $discovery = new AnnotatedClassDiscovery($this->subdir, $this->namespaces, $this->pluginDefinitionAnnotationName);
+      $discovery = new AnnotatedClassDiscovery($this->subdir, $this->namespaces, $this->pluginDefinitionAnnotationName, $this->additionalAnnotationNamespaces);
       $this->discovery = new ContainerDerivativeDiscoveryDecorator($discovery);
     }
     return $this->discovery;
@@ -273,12 +290,8 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
     // If this plugin was provided by a module that does not exist, remove the
     // plugin definition.
     foreach ($definitions as $plugin_id => $plugin_definition) {
-      // If the plugin definition is an object, attempt to convert it to an
-      // array, if that is not possible, skip further processing.
-      if (is_object($plugin_definition) && !($plugin_definition = (array) $plugin_definition)) {
-        continue;
-      }
-      if (isset($plugin_definition['provider']) && !in_array($plugin_definition['provider'], array('core', 'component')) && !$this->providerExists($plugin_definition['provider'])) {
+      $provider = $this->extractProviderFromDefinition($plugin_definition);
+      if ($provider && !in_array($provider, array('core', 'component')) && !$this->providerExists($provider)) {
         unset($definitions[$plugin_id]);
       }
     }
@@ -286,10 +299,35 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
   }
 
   /**
+   * Extracts the provider from a plugin definition.
+   *
+   * @param mixed $plugin_definition
+   *   The plugin definition. Usually either an array or an instance of
+   *   \Drupal\Component\Plugin\Definition\PluginDefinitionInterface
+   *
+   * @return string|null
+   *   The provider string, if it exists. NULL otherwise.
+   */
+  protected function extractProviderFromDefinition($plugin_definition) {
+    if ($plugin_definition instanceof PluginDefinitionInterface) {
+      return $plugin_definition->getProvider();
+    }
+
+    // Attempt to convert the plugin definition to an array.
+    if (is_object($plugin_definition)) {
+      $plugin_definition = (array) $plugin_definition;
+    }
+
+    if (isset($plugin_definition['provider'])) {
+      return $plugin_definition['provider'];
+    }
+  }
+
+  /**
    * Invokes the hook to alter the definitions if the alter hook is set.
    *
    * @param $definitions
-   *   The discovered plugin defintions.
+   *   The discovered plugin definitions.
    */
   protected function alterDefinitions(&$definitions) {
     if ($this->alterHook) {
@@ -305,6 +343,27 @@ class DefaultPluginManager extends PluginManagerBase implements PluginManagerInt
    */
   protected function providerExists($provider) {
     return $this->moduleHandler->moduleExists($provider);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCacheContexts() {
+    return [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCacheTags() {
+    return $this->cacheTags;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCacheMaxAge() {
+    return CACHE::PERMANENT;
   }
 
 }

@@ -1,13 +1,9 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\views\Plugin\views\wizard\WizardPluginBase.
- */
-
 namespace Drupal\views\Plugin\views\wizard;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\UrlGeneratorTrait;
 use Drupal\views\Entity\View;
@@ -15,6 +11,7 @@ use Drupal\views\Views;
 use Drupal\views_ui\ViewUI;
 use Drupal\views\Plugin\views\display\DisplayPluginBase;
 use Drupal\views\Plugin\views\PluginBase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * @defgroup views_wizard_plugins Views wizard plugins
@@ -114,11 +111,31 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
   );
 
   /**
+   * The bundle info service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface
+   */
+  protected $bundleInfoService;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    return new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('entity_type.bundle.info')
+    );
+  }
+
+  /**
    * Constructs a WizardPluginBase object.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeBundleInfoInterface $bundle_info_service) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
 
+    $this->bundleInfoService = $bundle_info_service;
     $this->base_table = $this->definition['base_table'];
 
     $entity_types = \Drupal::entityManager()->getDefinitions();
@@ -590,7 +607,7 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
   protected function buildFilters(&$form, FormStateInterface $form_state) {
     module_load_include('inc', 'views_ui', 'admin');
 
-    $bundles = entity_get_bundles($this->entityTypeId);
+    $bundles = $this->bundleInfoService->getBundleInfo($this->entityTypeId);
     // If the current base table support bundles and has more than one (like user).
     if (!empty($bundles) && $this->entityType && $this->entityType->hasKey('bundle')) {
       // Get all bundles and their human readable names.
@@ -660,7 +677,7 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
       'langcode' => \Drupal::languageManager()->getDefaultLanguage()->getId(),
     );
 
-    $view = entity_create('view', $values);
+    $view = View::create($values);
 
     // Build all display options for this view.
     $display_options = $this->buildDisplayOptions($form, $form_state);
@@ -800,7 +817,7 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
     $display_options['cache']['type'] = 'tag';
     $display_options['query']['type'] = 'views_query';
     $display_options['exposed_form']['type'] = 'basic';
-    $display_options['pager']['type'] = 'full';
+    $display_options['pager']['type'] = 'mini';
     $display_options['style']['type'] = 'default';
     $display_options['row']['type'] = 'fields';
 
@@ -1038,9 +1055,9 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
     if (empty($page['items_per_page'])) {
       $display_options['pager']['type'] = 'none';
     }
-    // If the user checked the pager checkbox use a full pager.
-    elseif (isset($page['pager'])) {
-      $display_options['pager']['type'] = 'full';
+    // If the user checked the pager checkbox use a mini pager.
+    elseif (!empty($page['pager'])) {
+      $display_options['pager']['type'] = 'mini';
     }
     // If the user doesn't have checked the checkbox use the pager which just
     // displays a certain amount of items.
@@ -1074,7 +1091,8 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
     $block = $form_state->getValue('block');
     $display_options['title'] = $block['title'];
     $display_options['style'] = array('type' => $block['style']['style_plugin']);
-    $display_options['row'] = array('type' => isset($block['style']['row_plugin']) ? $block['style']['row_plugin'] : 'fields');
+    $options = $this->rowStyleOptions();
+    $display_options['row'] = array('type' => (isset($block['style']['row_plugin']) && isset($options[$block['style']['row_plugin']])) ? $block['style']['row_plugin'] : 'fields');
     $display_options['pager']['type'] = $block['pager'] ? 'full' : (empty($block['items_per_page']) ? 'none' : 'some');
     $display_options['pager']['options']['items_per_page'] = $block['items_per_page'];
     return $display_options;
@@ -1203,7 +1221,7 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
    * @param bool $unset
    *   Should the view be removed from the list of validated views.
    *
-   * @return \Drupal\views_ui\ViewUI $view
+   * @return \Drupal\views_ui\ViewUI
    *   The validated view object.
    */
   protected function retrieveValidatedView(array $form, FormStateInterface $form_state, $unset = TRUE) {
@@ -1249,7 +1267,7 @@ abstract class WizardPluginBase extends PluginBase implements WizardInterface {
   }
 
   /**
-   * {@inheritDoc}
+   * {@inheritdoc}
    */
   public function createView(array $form, FormStateInterface $form_state) {
     $view = $this->retrieveValidatedView($form, $form_state);

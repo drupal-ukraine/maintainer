@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Database\Driver\sqlite\Connection.
- */
-
 namespace Drupal\Core\Database\Driver\sqlite;
 
 use Drupal\Core\Database\Database;
@@ -29,6 +24,18 @@ class Connection extends DatabaseConnection {
   protected $willRollback;
 
   /**
+   * A map of condition operators to SQLite operators.
+   *
+   * We don't want to override any of the defaults.
+   */
+  protected static $sqliteConditionOperatorMap = [
+    'LIKE' => ['postfix' => " ESCAPE '\\'"],
+    'NOT LIKE' => ['postfix' => " ESCAPE '\\'"],
+    'LIKE BINARY' => ['postfix' => " ESCAPE '\\'", 'operator' => 'GLOB'],
+    'NOT LIKE BINARY' => ['postfix' => " ESCAPE '\\'", 'operator' => 'NOT GLOB'],
+  ];
+
+  /**
    * All databases attached to the current database. This is used to allow
    * prefixes to be safely handled without locking the table
    *
@@ -46,7 +53,7 @@ class Connection extends DatabaseConnection {
    *
    * @var bool
    */
-  var $tableDropped = FALSE;
+  public $tableDropped = FALSE;
 
   /**
    * Constructs a \Drupal\Core\Database\Driver\sqlite\Connection object.
@@ -104,7 +111,19 @@ class Connection extends DatabaseConnection {
       // Convert numeric values to strings when fetching.
       \PDO::ATTR_STRINGIFY_FETCHES => TRUE,
     );
-    $pdo = new \PDO('sqlite:' . $connection_options['database'], '', '', $connection_options['pdo']);
+
+    try {
+      $pdo = new \PDO('sqlite:' . $connection_options['database'], '', '', $connection_options['pdo']);
+    }
+    catch (\PDOException $e) {
+      if ($e->getCode() == static::DATABASE_NOT_FOUND) {
+        throw new DatabaseNotFoundException($e->getMessage(), $e->getCode(), $e);
+      }
+      // SQLite doesn't have a distinct error code for access denied, so don't
+      // deal with that case.
+      throw $e;
+    }
+
 
     // Create functions needed by SQLite.
     $pdo->sqliteCreateFunction('if', array(__CLASS__, 'sqlFunctionIf'));
@@ -128,6 +147,16 @@ class Connection extends DatabaseConnection {
 
     // Create a user-space case-insensitive collation with UTF-8 support.
     $pdo->sqliteCreateCollation('NOCASE_UTF8', array('Drupal\Component\Utility\Unicode', 'strcasecmp'));
+
+    // Set SQLite init_commands if not already defined. Enable the Write-Ahead
+    // Logging (WAL) for SQLite. See https://www.drupal.org/node/2348137 and
+    // https://www.sqlite.org/wal.html.
+    $connection_options += array(
+      'init_commands' => array(),
+    );
+    $connection_options['init_commands'] += array(
+      'wal' => "PRAGMA journal_mode=WAL",
+    );
 
     // Execute sqlite init_commands.
     if (isset($connection_options['init_commands'])) {
@@ -365,14 +394,7 @@ class Connection extends DatabaseConnection {
   }
 
   public function mapConditionOperator($operator) {
-    // We don't want to override any of the defaults.
-    static $specials = array(
-      'LIKE' => array('postfix' => " ESCAPE '\\'"),
-      'NOT LIKE' => array('postfix' => " ESCAPE '\\'"),
-      'LIKE BINARY' => array('postfix' => " ESCAPE '\\'", 'operator' => 'GLOB'),
-      'NOT LIKE BINARY' => array('postfix' => " ESCAPE '\\'", 'operator' => 'NOT GLOB'),
-    );
-    return isset($specials[$operator]) ? $specials[$operator] : NULL;
+    return isset(static::$sqliteConditionOperatorMap[$operator]) ? static::$sqliteConditionOperatorMap[$operator] : NULL;
   }
 
   /**

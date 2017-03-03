@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\forum\Tests\Views\ForumIntegrationTest.
- */
-
 namespace Drupal\forum\Tests\Views;
 
+use Drupal\node\NodeInterface;
 use Drupal\views\Views;
 use Drupal\views\Tests\ViewTestBase;
 use Drupal\views\Tests\ViewTestData;
@@ -53,7 +49,7 @@ class ForumIntegrationTest extends ViewTestBase {
     // Create some nodes which are part of this forum with some comments.
     $nodes = array();
     for ($i = 0; $i < 3; $i++) {
-      $node = $this->drupalCreateNode(array('type' => 'forum', 'taxonomy_forums' => array($term->id()), 'sticky' => $i == 0 ? NODE_STICKY : NODE_NOT_STICKY));
+      $node = $this->drupalCreateNode(['type' => 'forum', 'taxonomy_forums' => [$term->id()], 'sticky' => $i == 0 ? NodeInterface::STICKY : NodeInterface::NOT_STICKY]);
       $nodes[] = $node;
     }
 
@@ -75,17 +71,17 @@ class ForumIntegrationTest extends ViewTestBase {
     $expected_result = array();
     $expected_result[] = array(
       'nid' => $nodes[0]->id(),
-      'sticky' => NODE_STICKY,
+      'sticky' => NodeInterface::STICKY,
       'comment_count' => 1.
     );
     $expected_result[] = array(
       'nid' => $nodes[1]->id(),
-      'sticky' => NODE_NOT_STICKY,
+      'sticky' => NodeInterface::NOT_STICKY,
       'comment_count' => 2.
     );
     $expected_result[] = array(
       'nid' => $nodes[2]->id(),
-      'sticky' => NODE_NOT_STICKY,
+      'sticky' => NodeInterface::NOT_STICKY,
       'comment_count' => 3.
     );
     $column_map = array(

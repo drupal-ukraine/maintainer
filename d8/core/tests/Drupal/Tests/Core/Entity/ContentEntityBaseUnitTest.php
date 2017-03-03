@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Tests\Core\Entity\ContentEntityBaseUnitTest.
- */
-
 namespace Drupal\Tests\Core\Entity;
 
 use Drupal\Core\Access\AccessResult;
@@ -12,6 +7,7 @@ use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Language\LanguageInterface;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Tests\UnitTestCase;
 use Drupal\Core\Language\Language;
 
@@ -135,9 +131,7 @@ class ContentEntityBaseUnitTest extends UnitTestCase {
 
     $this->uuid = $this->getMock('\Drupal\Component\Uuid\UuidInterface');
 
-    $this->typedDataManager = $this->getMockBuilder('\Drupal\Core\TypedData\TypedDataManager')
-      ->disableOriginalConstructor()
-      ->getMock();
+    $this->typedDataManager = $this->getMock(TypedDataManagerInterface::class);
     $this->typedDataManager->expects($this->any())
       ->method('getDefinition')
       ->with('entity')
@@ -188,8 +182,8 @@ class ContentEntityBaseUnitTest extends UnitTestCase {
       ->method('getFieldDefinitions')
       ->with($this->entityTypeId, $this->bundle)
       ->will($this->returnValue($this->fieldDefinitions));
-    $this->entity = $this->getMockForAbstractClass('\Drupal\Core\Entity\ContentEntityBase', array($values, $this->entityTypeId, $this->bundle));
 
+    $this->entity = $this->getMockForAbstractClass('\Drupal\Core\Entity\ContentEntityBase', array($values, $this->entityTypeId, $this->bundle), '', TRUE, TRUE, TRUE, ['isNew']);
     $values['defaultLangcode'] = array(LanguageInterface::LANGCODE_DEFAULT => LanguageInterface::LANGCODE_NOT_SPECIFIED);
     $this->entityUnd = $this->getMockForAbstractClass('\Drupal\Core\Entity\ContentEntityBase', array($values, $this->entityTypeId, $this->bundle));
   }
@@ -243,7 +237,7 @@ class ContentEntityBaseUnitTest extends UnitTestCase {
     $this->assertFalse($this->entity->isNewRevision());
     $this->assertTrue($this->entity->isNewRevision());
     $this->entity->setNewRevision(TRUE);
-    $this->assertTRUE($this->entity->isNewRevision());
+    $this->assertTrue($this->entity->isNewRevision());
   }
 
   /**
@@ -268,6 +262,12 @@ class ContentEntityBaseUnitTest extends UnitTestCase {
     $this->assertTrue($this->entity->isDefaultRevision(FALSE));
     // The last call changed the return value for this call.
     $this->assertFalse($this->entity->isDefaultRevision());
+    // The revision for a new entity should always be the default revision.
+    $this->entity->expects($this->any())
+      ->method('isNew')
+      ->will($this->returnValue(TRUE));
+    $this->entity->isDefaultRevision(FALSE);
+    $this->assertTrue($this->entity->isDefaultRevision());
   }
 
   /**

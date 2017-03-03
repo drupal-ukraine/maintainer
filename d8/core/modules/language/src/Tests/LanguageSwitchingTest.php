@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\language\Tests\LanguageSwitchingTest.
- */
-
 namespace Drupal\language\Tests;
 
 use Drupal\language\Entity\ConfigurableLanguage;
@@ -30,7 +25,7 @@ class LanguageSwitchingTest extends WebTestBase {
   protected function setUp() {
     parent::setUp();
 
-    // Create and login user.
+    // Create and log in user.
     $admin_user = $this->drupalCreateUser(array('administer blocks', 'administer languages', 'access administration pages'));
     $this->drupalLogin($admin_user);
   }
@@ -123,8 +118,9 @@ class LanguageSwitchingTest extends WebTestBase {
   protected function doTestLanguageBlockAnonymous($block_label) {
     $this->drupalLogout();
 
-    // Assert that the language switching block is displayed on the frontpage.
-    $this->drupalGet('');
+    // Assert that the language switching block is displayed on the frontpage
+    // and ensure that the active class is added when query params are present.
+    $this->drupalGet('', ['query' => ['foo' => 'bar']]);
     $this->assertText($block_label, 'Language switcher block found.');
 
     // Assert that only the current language is marked as active.

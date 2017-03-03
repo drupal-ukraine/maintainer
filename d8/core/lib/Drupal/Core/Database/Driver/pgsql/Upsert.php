@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Database\Driver\pgsql\Upsert.
- */
-
 namespace Drupal\Core\Database\Driver\pgsql;
 
 use Drupal\Core\Database\Query\Upsert as QueryUpsert;
@@ -64,7 +59,7 @@ class Upsert extends QueryUpsert {
     }
     catch (\Exception $e) {
       // One of the queries failed, rollback the whole batch.
-      $transaction->rollback();
+      $transaction->rollBack();
 
       // Rethrow the exception for the calling code.
       throw $e;

@@ -1,12 +1,8 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Database\Driver\mysql\Connection.
- */
-
 namespace Drupal\Core\Database\Driver\mysql;
 
+use Drupal\Core\Database\DatabaseAccessDeniedException;
 use Drupal\Core\Database\DatabaseExceptionWrapper;
 
 use Drupal\Core\Database\Database;
@@ -30,6 +26,11 @@ class Connection extends DatabaseConnection {
    * Error code for "Unknown database" error.
    */
   const DATABASE_NOT_FOUND = 1049;
+
+  /**
+   * Error code for "Access denied" error.
+   */
+  const ACCESS_DENIED = 1045;
 
   /**
    * Error code for "Can't initialize character set" error.
@@ -84,7 +85,8 @@ class Connection extends DatabaseConnection {
   public function query($query, array $args = array(), $options = array()) {
     try {
       return parent::query($query, $args, $options);
-    } catch (DatabaseException $e) {
+    }
+    catch (DatabaseException $e) {
       if ($e->getPrevious()->errorInfo[1] == 1153) {
         // If a max_allowed_packet error occurs the message length is truncated.
         // This should prevent the error from recurring if the exception is
@@ -143,7 +145,18 @@ class Connection extends DatabaseConnection {
       $connection_options['pdo'] += [\PDO::MYSQL_ATTR_MULTI_STATEMENTS => FALSE];
     }
 
-    $pdo = new \PDO($dsn, $connection_options['username'], $connection_options['password'], $connection_options['pdo']);
+    try {
+      $pdo = new \PDO($dsn, $connection_options['username'], $connection_options['password'], $connection_options['pdo']);
+    }
+    catch (\PDOException $e) {
+      if ($e->getCode() == static::DATABASE_NOT_FOUND) {
+        throw new DatabaseNotFoundException($e->getMessage(), $e->getCode(), $e);
+      }
+      if ($e->getCode() == static::ACCESS_DENIED) {
+        throw new DatabaseAccessDeniedException($e->getMessage(), $e->getCode(), $e);
+      }
+      throw $e;
+    }
 
     // Force MySQL to use the UTF-8 character set. Also set the collation, if a
     // certain one has been set; otherwise, MySQL defaults to

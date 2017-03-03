@@ -1,15 +1,11 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\responsive_image\Tests\ResponsiveImageFieldUiTest.
- */
-
 namespace Drupal\responsive_image\Tests;
 
 
 use Drupal\field_ui\Tests\FieldUiTestTrait;
 use Drupal\simpletest\WebTestBase;
+use Drupal\responsive_image\Entity\ResponsiveImageStyle;
 
 /**
  * Tests the "Responsive Image" formatter settings form.
@@ -56,7 +52,11 @@ class ResponsiveImageFieldUiTest extends WebTestBase {
     $this->drupalGet($manage_display);
 
     // Change the formatter and check that the summary is updated.
-    $edit = array('fields[field_image][type]' => 'responsive_image', 'refresh_rows' => 'field_image');
+    $edit = array(
+      'fields[field_image][type]' => 'responsive_image',
+      'fields[field_image][region]' => 'content',
+      'refresh_rows' => 'field_image',
+    );
     $this->drupalPostAjaxForm(NULL, $edit, array('op' => t('Refresh')));
     $this->assertText("Select a responsive image style.", 'The expected summary is displayed.');
 
@@ -65,7 +65,7 @@ class ResponsiveImageFieldUiTest extends WebTestBase {
     $this->assertText("Select a responsive image style.", 'The expected summary is displayed.');
 
     // Create responsive image styles.
-    $responsive_image_style = entity_create('responsive_image_style', array(
+    $responsive_image_style = ResponsiveImageStyle::create(array(
       'id' => 'style_one',
       'label' => 'Style One',
       'breakpoint_group' => 'responsive_image_test_module',

@@ -5,6 +5,7 @@
  * Install, update and uninstall functions for the node module.
  */
 
+use Drupal\Core\Database\Database;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\user\RoleInterface;
 
@@ -63,6 +64,7 @@ function node_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 1,
+        'size' => 'tiny',
       ),
       'gid' => array(
         'description' => "The grant ID a user must possess in the specified realm to gain this row's privileges on the node.",
@@ -164,11 +166,11 @@ function node_update_8001() {
   // \Drupal::entityDefinitionUpdateManager()->updateFieldStorageDefinition()
   // with the new definition.
   $storage_definition = BaseFieldDefinition::create('boolean')
-      ->setLabel(t('Revision translation affected'))
-      ->setDescription(t('Indicates if the last edit of a translation belongs to current revision.'))
-      ->setReadOnly(TRUE)
-      ->setRevisionable(TRUE)
-      ->setTranslatable(TRUE);
+    ->setLabel(t('Revision translation affected'))
+    ->setDescription(t('Indicates if the last edit of a translation belongs to current revision.'))
+    ->setReadOnly(TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(TRUE);
 
   \Drupal::entityDefinitionUpdateManager()
     ->installFieldStorageDefinition('revision_translation_affected', 'node', 'node', $storage_definition);
@@ -218,3 +220,38 @@ function node_update_8003() {
     $manager->updateFieldStorageDefinition($manager->getFieldStorageDefinition($field_name, 'node'));
   }
 }
+
+/**
+ * @addtogroup updates-8.3.x
+ * @{
+ */
+
+/**
+ * Change {node_access}.fallback from an int to a tinyint as it is a boolean.
+ */
+function node_update_8300() {
+  Database::getConnection()->schema()->changeField('node_access', 'fallback', 'fallback', [
+    'description' => 'Boolean indicating whether this record should be used as a fallback if a language condition is not provided.',
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 1,
+    'size' => 'tiny',
+  ]);
+}
+
+/**
+ * Set the 'published' entity key.
+ */
+function node_update_8301() {
+  $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type = $definition_update_manager->getEntityType('node');
+  $keys = $entity_type->getKeys();
+  $keys['published'] = 'status';
+  $entity_type->set('entity_keys', $keys);
+  $definition_update_manager->updateEntityType($entity_type);
+}
+
+/**
+ * @} End of "addtogroup updates-8.3.x".
+ */

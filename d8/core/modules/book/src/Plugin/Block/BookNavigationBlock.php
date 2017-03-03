@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\book\Plugin\Block\BookNavigationBlock.
- */
-
 namespace Drupal\book\Plugin\Block;
 
 use Drupal\Core\Block\BlockBase;
@@ -12,6 +7,7 @@ use Drupal\book\BookManagerInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Drupal\Core\Entity\EntityStorageInterface;
@@ -161,9 +157,12 @@ class BookNavigationBlock extends BlockBase implements ContainerFactoryPluginInt
       }
     }
     elseif ($current_bid) {
-      // Only display this block when the user is browsing a book.
-      $query = \Drupal::entityQuery('node');
-      $nid = $query->condition('nid', $node->book['bid'], '=')->execute();
+      // Only display this block when the user is browsing a book and do
+      // not show unpublished books.
+      $nid = \Drupal::entityQuery('node')
+        ->condition('nid', $node->book['bid'], '=')
+        ->condition('status', NodeInterface::PUBLISHED)
+        ->execute();
 
       // Only show the block if the user has view access for the top-level node.
       if ($nid) {

@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\Core\Field\Plugin\Field\FieldFormatter\EntityReferenceFormatterBase.
- */
-
 namespace Drupal\Core\Field\Plugin\Field\FieldFormatter;
 
 use Drupal\Core\Cache\CacheableMetadata;
@@ -174,9 +169,9 @@ abstract class EntityReferenceFormatterBase extends FormatterBase {
   /**
    * Checks access to the given entity.
    *
-   * By default, entity access is checked. However, a subclass can choose to
-   * exclude certain items from entity access checking by immediately granting
-   * access.
+   * By default, entity 'view' access is checked. However, a subclass can choose
+   * to exclude certain items from entity access checking by immediately
+   * granting access.
    *
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *    The entity to check.

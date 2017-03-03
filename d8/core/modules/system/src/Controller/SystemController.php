@@ -1,15 +1,9 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\system\Controller\SystemController.
- */
-
 namespace Drupal\system\Controller;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Extension\ThemeHandlerInterface;
 use Drupal\Core\Form\FormBuilderInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
@@ -23,13 +17,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Returns responses for System routes.
  */
 class SystemController extends ControllerBase {
-
-  /**
-   * The entity query factory object.
-   *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
-   */
-  protected $queryFactory;
 
   /**
    * System Manager Service.
@@ -71,20 +58,17 @@ class SystemController extends ControllerBase {
    *
    * @param \Drupal\system\SystemManager $systemManager
    *   System manager service.
-   * @param \Drupal\Core\Entity\Query\QueryFactory $queryFactory
-   *   The entity query object.
    * @param \Drupal\Core\Theme\ThemeAccessCheck $theme_access
    *   The theme access checker service.
    * @param \Drupal\Core\Form\FormBuilderInterface $form_builder
    *   The form builder.
    * @param \Drupal\Core\Extension\ThemeHandlerInterface $theme_handler
    *   The theme handler.
-   * @param \Drupal\Core\Menu\MenuLinkTreeInterface
+   * @param \Drupal\Core\Menu\MenuLinkTreeInterface $menu_link_tree
    *   The menu link tree service.
    */
-  public function __construct(SystemManager $systemManager, QueryFactory $queryFactory, ThemeAccessCheck $theme_access, FormBuilderInterface $form_builder, ThemeHandlerInterface $theme_handler, MenuLinkTreeInterface $menu_link_tree) {
+  public function __construct(SystemManager $systemManager, ThemeAccessCheck $theme_access, FormBuilderInterface $form_builder, ThemeHandlerInterface $theme_handler, MenuLinkTreeInterface $menu_link_tree) {
     $this->systemManager = $systemManager;
-    $this->queryFactory = $queryFactory;
     $this->themeAccess = $theme_access;
     $this->formBuilder = $form_builder;
     $this->themeHandler = $theme_handler;
@@ -97,7 +81,6 @@ class SystemController extends ControllerBase {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('system.manager'),
-      $container->get('entity.query'),
       $container->get('access_check.theme'),
       $container->get('form_builder'),
       $container->get('theme_handler'),
@@ -245,8 +228,8 @@ class SystemController extends ControllerBase {
         // content has a common place in all themes.
         $theme->incompatible_region = !isset($theme->info['regions']['content']);
         $theme->incompatible_php = version_compare(phpversion(), $theme->info['php']) < 0;
-        // Confirmed that the base theme is available.
-        $theme->incompatible_base = isset($theme->info['base theme']) && !isset($themes[$theme->info['base theme']]);
+        // Confirm that all base themes are available.
+        $theme->incompatible_base = (isset($theme->info['base theme']) && !($theme->base_themes === array_filter($theme->base_themes)));
         // Confirm that the theme engine is available.
         $theme->incompatible_engine = isset($theme->info['engine']) && !isset($theme->owner);
       }
@@ -312,7 +295,7 @@ class SystemController extends ControllerBase {
         $theme->notes[] = $this->t('default theme');
       }
       if ($theme->is_admin) {
-        $theme->notes[] = $this->t('admin theme');
+        $theme->notes[] = $this->t('administration theme');
       }
 
       // Sort installed and uninstalled themes into their own groups.

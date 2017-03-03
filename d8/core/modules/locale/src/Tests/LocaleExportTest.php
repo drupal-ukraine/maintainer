@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\locale\Tests\LocaleExportTest.
- */
-
 namespace Drupal\locale\Tests;
 
 use Drupal\simpletest\WebTestBase;
@@ -38,8 +33,8 @@ class LocaleExportTest extends WebTestBase {
     $this->drupalLogin($this->adminUser);
 
     // Copy test po files to the translations directory.
-    file_unmanaged_copy(drupal_get_path('module', 'locale') . '/tests/test.de.po', 'translations://', FILE_EXISTS_REPLACE);
-    file_unmanaged_copy(drupal_get_path('module', 'locale') . '/tests/test.xx.po', 'translations://', FILE_EXISTS_REPLACE);
+    file_unmanaged_copy(__DIR__ . '/../../tests/test.de.po', 'translations://', FILE_EXISTS_REPLACE);
+    file_unmanaged_copy(__DIR__ . '/../../tests/test.xx.po', 'translations://', FILE_EXISTS_REPLACE);
   }
 
   /**
@@ -48,7 +43,7 @@ class LocaleExportTest extends WebTestBase {
   public function testExportTranslation() {
     // First import some known translations.
     // This will also automatically add the 'fr' language.
-    $name = tempnam('temporary://', "po_") . '.po';
+    $name = \Drupal::service('file_system')->tempnam('temporary://', "po_") . '.po';
     file_put_contents($name, $this->getPoFile());
     $this->drupalPostForm('admin/config/regional/translate/import', array(
       'langcode' => 'fr',
@@ -67,7 +62,7 @@ class LocaleExportTest extends WebTestBase {
     $this->assertRaw('msgstr "lundi"', 'French translations present in exported file.');
 
     // Import some more French translations which will be marked as customized.
-    $name = tempnam('temporary://', "po2_") . '.po';
+    $name = \Drupal::service('file_system')->tempnam('temporary://', "po2_") . '.po';
     file_put_contents($name, $this->getCustomPoFile());
     $this->drupalPostForm('admin/config/regional/translate/import', array(
       'langcode' => 'fr',
